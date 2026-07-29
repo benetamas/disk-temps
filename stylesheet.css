@@ -8,16 +8,16 @@
     font-size: 0.9em;
 }
 
-/* A symbolic SVG a color-t veszi fel, így a hőfok-osztályok az ikont is színezik */
+/* The symbolic SVG inherits color, so the temperature classes color the icon too. */
 .disk-temp-icon {
     icon-size: 16px;
 }
 
-/* A négy szintszín itt csak TARTALÉK. A tényleges színt a kód inline
- * `set_style('color: …')`-lal teszi rá a color-cool/warm/hot/na beállításokból,
- * és az inline stílus felülírja a stíluslapot. Statikus CSS-ből nem megy, mert
- * futásidőben állítható. Az értékek itt a defaultokkal egyeznek, hogy egy
- * esetleges sikertelen beállítás-olvasásnál se legyen színtelen a kijelzés. */
+/* The four level colors here are FALLBACKS only. The code applies the actual
+ * colors inline with `set_style('color: …')`, using the color-cool/warm/hot/na
+ * settings, and the inline style overrides the stylesheet. Static CSS cannot
+ * handle this because the colors are configurable at runtime. These values
+ * match the defaults so the display still has colors if reading settings fails. */
 .disk-temp-cool {
     color: #8ff0a4;
 }
@@ -35,10 +35,10 @@
     color: rgba(255, 255, 255, 0.5);
 }
 
-/* A színt KÖTELEZŐ megadni: e nélkül a téma szövegszínét örökölte
- * (Lavanda: rgba(0,0,0,.6)), ami a sötét menün rgb(25,24,30) lett a
- * rgb(38,36,46) háttéren -- 1.15-es kontraszt, olvashatatlan. Ez az
- * elsődleges azonosító kolumna, ezért a legvilágosabb a háromból. */
+/* The color MUST be specified: otherwise it inherits the theme's text color
+ * (Lavanda: rgba(0,0,0,.6)), which becomes rgb(25,24,30) on the dark menu's
+ * rgb(38,36,46) background: an unreadable contrast ratio of 1.15. This is the
+ * primary identifier column, so it is the brightest of the three. */
 .disk-temp-dev {
     min-width: 5.5em;
     font-family: monospace;
@@ -62,15 +62,17 @@
     font-family: monospace;
 }
 
-/* --- Saját sötét dropdown ------------------------------------------------- *
- * A shell téma szabja meg a menü hátterét. A Lavanda #FFFFFF hátteret és
- * `color: rgba(0,0,0,.6) !important`-ot ad, amiben a világos labeljeink
- * olvashatatlanok. Két class ugyanazon az elemen (.popup-menu.disk-temp-menu)
- * nagyobb specificitást ad, mint a témában lévő `.popup-menu .popup-menu-content`,
- * tehát nem a stíluslapok betöltési sorrendjén múlik, melyik győz.
+/* --- Custom dark drop-down menu ------------------------------------------ *
+ * The shell theme controls the menu background. Lavanda uses a #FFFFFF
+ * background and `color: rgba(0,0,0,.6) !important`, which makes our light
+ * labels unreadable. Two classes on the same element
+ * (.popup-menu.disk-temp-menu) provide greater specificity than the theme's
+ * `.popup-menu .popup-menu-content`, so the winner does not depend on
+ * stylesheet loading order.
  *
- * Szándékosan NINCS széles `StLabel { color }` szabály: az specifikusabb lenne
- * a hőfok-osztályoknál, és fehérre festené a zöld/sárga/piros értékeket is. */
+ * There is intentionally NO broad `StLabel { color }` rule: it would be more
+ * specific than the temperature classes and would also turn the
+ * green/yellow/red values white. */
 
 .popup-menu.disk-temp-menu .popup-menu-content {
     background-color: #26242e;
@@ -87,7 +89,7 @@
     background-color: rgba(255, 255, 255, 0.12);
 }
 
-/* Azoknak a labeleknek, amiknek nincs saját class-uk (pl. „Beállítások…”) */
+/* Labels without their own class (for example, “Settings…”). */
 .disk-temp-menu-text {
     color: rgba(255, 255, 255, 0.92);
 }

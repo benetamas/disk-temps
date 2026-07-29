@@ -2,10 +2,10 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
 /*
- * Hardverfelderítés a GNOME Shell/UI rétegtől függetlenül.
+ * Hardware discovery independent of the GNOME Shell/UI layer.
  *
- * A `var` deklarációk szándékosak: a GNOME Shell 40 legacy GJS
- * modulbetöltője ezeket teszi elérhetővé a `Me.imports.hardware` névtérben.
+ * The `var` declarations are intentional: the legacy GJS module loader in
+ * GNOME Shell 40 exposes them through the `Me.imports.hardware` namespace.
  */
 
 const Gio = imports.gi.Gio;
@@ -55,7 +55,7 @@ var listDirectory = function (path) {
             try {
                 enumerator.close(null);
             } catch (e) {
-                // A felderítés ettől még használható.
+                // Discovery remains usable despite this failure.
             }
         }
     }
@@ -111,7 +111,7 @@ var discoverNvmeControllers = function (
     });
 };
 
-// Kisebb érték = jobb, egyértelműbb rendszer-/ház-hőmérséklet címke.
+// Lower values indicate better, less ambiguous system/case temperature labels.
 var ambientLabelPriority = function (label) {
     let normalized = (label || '').trim().toLowerCase();
     if (normalized === 'systin')

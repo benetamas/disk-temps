@@ -2,10 +2,10 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
 /*
- * A kijelzéstől és a GNOME Shelltől független hőmérséklet-logika.
+ * Temperature logic independent of the display and GNOME Shell.
  *
- * A `var` deklarációk szándékosak: a GNOME Shell 40 legacy GJS
- * modulbetöltője ezeket teszi elérhetővé a `Me.imports.domain` névtérben.
+ * The `var` declarations are intentional: the legacy GJS module loader in
+ * GNOME Shell 40 exposes them through the `Me.imports.domain` namespace.
  */
 
 var DEFAULT_THRESHOLDS = {
@@ -30,9 +30,9 @@ var kelvinToCelsius = function (kelvin) {
     return Math.round(kelvin - 273.15);
 };
 
-// Az nvme-cli JSON kimenete verziótól függően nyers Kelvint vagy már Celsius
-// értéket adhat. A reális Celsius-tartománytól messze lévő számot Kelvinnek
-// tekintjük.
+// Depending on the version, the nvme-cli JSON output may contain raw Kelvin
+// or an already converted Celsius value. A number far outside the realistic
+// Celsius range is treated as Kelvin.
 var nvmeTemperatureToCelsius = function (value) {
     if (typeof value !== 'number' || value <= 0)
         return null;
@@ -48,7 +48,7 @@ var shortModel = function (model) {
     return shortened.length > 24 ? `${shortened.slice(0, 23)}…` : shortened;
 };
 
-// SATA előre, NVMe utána, csoporton belül névsorban — fix, nem ugráló sorrend.
+// SATA first, NVMe second, alphabetical within each group: a fixed, stable order.
 var deviceSortKey = function (device) {
     let name = shortDevice(device);
     return `${name.startsWith('nvme') ? 1 : 0}:${name}`;
@@ -58,7 +58,7 @@ var compareDevices = function (left, right) {
     return deviceSortKey(left.dev).localeCompare(deviceSortKey(right.dev));
 };
 
-// Hőfok szerint csökkenő, ismeretlen értékek a lista végén.
+// Sort by temperature in descending order, with unknown values at the end.
 var compareDrivesByTemperature = function (left, right) {
     if (left.temp === null && right.temp === null)
         return compareDevices(left, right);
@@ -82,13 +82,13 @@ var levelForTemperature = function (temperature, kind, thresholds) {
     return 'cool';
 };
 
-// Az n/a szándékosan figyelmet kér: egy nem olvasható diszket nem rejtünk el.
+// n/a intentionally requires attention: a disk that cannot be read is not hidden.
 var needsAttention = function (drive, thresholds) {
     return levelForTemperature(drive.temp, drive.kind, thresholds) !== 'cool';
 };
 
-// A legsúlyosabb állapot számít, nem a legnagyobb hőmérséklet: a küszöbök
-// eszköztípusonként eltérnek.
+// The most severe state matters, not the highest temperature: thresholds vary
+// by device type.
 var worstLevel = function (drives, thresholds) {
     let worst = 'cool';
     for (let drive of drives) {
@@ -99,7 +99,8 @@ var worstLevel = function (drives, thresholds) {
     return worst;
 };
 
-// A ház-ambientnek nincs saját küszöbpárja: 3 fokkal a riasztás előtt sárga.
+// The case ambient sensor has no separate threshold pair: it turns warm 3 °C
+// before the alert limit.
 var systinLevel = function (temperature, alertLimit) {
     if (temperature === null)
         return 'na';
@@ -112,7 +113,8 @@ var systinLevel = function (temperature, alertLimit) {
     return 'cool';
 };
 
-// A szín inline style-ba kerül, ezért csak a két támogatott hex alakot fogadjuk.
+// The color is applied as an inline style, so accept only the two supported
+// hexadecimal formats.
 var sanitizeColor = function (value, fallback) {
     return /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(value || '')
         ? value

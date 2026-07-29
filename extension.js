@@ -24,9 +24,9 @@ function _(message) {
     return translate(message);
 }
 
-// Ennyi frissítési kör után újraenumeráljuk az udisks, NVMe és hwmon
-// eszközöket. Boot után egyes interfészek később jelenhetnek meg, és a
-// hotplugot sem minden régi udisks verzió jelzi teljesen.
+// Re-enumerate udisks, NVMe, and hwmon devices after this many refresh cycles.
+// Some interfaces may appear later during boot, and not every old udisks
+// version reports hotplug events completely.
 const REDISCOVER_TICKS = 12;
 
 const UDISKS_NAME = 'org.freedesktop.UDisks2';
@@ -67,12 +67,12 @@ const AtaIface = `
 const ObjectManagerProxy = Gio.DBusProxy.makeProxyWrapper(ObjectManagerIface);
 const AtaProxy = Gio.DBusProxy.makeProxyWrapper(AtaIface);
 
-// a{sv} deepUnpack után a value-k GVariant-ok maradnak
+// Values in a{sv} remain GVariants after deepUnpack.
 function unwrap(value) {
     return value instanceof GLib.Variant ? value.deepUnpack() : value;
 }
 
-// PreferredDevice = 'ay' bytestring, NUL-terminált
+// PreferredDevice is an 'ay' byte string terminated by NUL.
 function bytestring(value) {
     let bytes = unwrap(value);
     if (bytes === null || bytes === undefined)
@@ -98,11 +98,11 @@ class DiskTempsButton extends PanelMenu.Button {
         this._stopped = false;
         this._timeout = null;
 
-        // Kuszoboket es szineket a legelejen betoltjuk: a _syncPanel es a
-        // _render mar hasznalja oket.
+        // Load thresholds and colors at the very beginning: _syncPanel and
+        // _render already use them.
         this._loadAppearance();
 
-        this._ataDrives = [];       // udisks-ból, SmartTemperature-rel
+        this._ataDrives = [];       // From udisks, with SmartTemperature.
         this._nvmeDrives = [];
         this._nvmeBusy = 0;
         this._nvmeFailLogged = false;
@@ -116,12 +116,12 @@ class DiskTempsButton extends PanelMenu.Button {
         this._systemMonitor = Hardware.discoverSystemMonitor();
         this._systin = null;
         this._fans = [];
-        // Amit egyszer forogni lattunk, azt tovabb figyeljuk -- igy egy kesobb
-        // leallo ventilator 0 RPM-mel ott marad a listaban (ez a hibadetektor),
-        // es egy uj headerre atdugott ventilator magatol megjelenik.
+        // Keep monitoring any fan once it has been seen spinning. This keeps a
+        // fan that later stops in the list at 0 RPM (the failure detector), and
+        // a fan moved to another header appears automatically.
         this._fanSeen = new Set();
 
-        this._ataKey = null;    // a legutobb felepitett ATA diszkkeszlet
+        this._ataKey = null;    // The ATA disk set used for the latest build.
         this._ticks = 0;
 
         this._objectManager = null;
@@ -139,7 +139,7 @@ class DiskTempsButton extends PanelMenu.Button {
 
         this._panelItems = new Map();
         this._panelIcon = null;
-        this._panelStructure = null;    // mit épített legutóbb a _syncPanel
+        this._panelStructure = null;    // What _syncPanel built most recently.
 
         this._rows = new Map();
         this._section = new PopupMenu.PopupMenuSection();
@@ -171,14 +171,14 @@ class DiskTempsButton extends PanelMenu.Button {
         this._prefsItem = new PopupMenu.PopupMenuItem(_('Settings…'));
         this._prefsItem.connect('activate', () => ExtensionUtils.openPrefs());
         this.menu.addMenuItem(this._prefsItem);
-        // Ennek a labeljenek nincs sajat style class-a, tehat a tema szinet
-        // orokolne (Lavanda: fekete) -- sotet hatteren olvashatatlan lenne.
+        // This label has no style class of its own, so it would inherit the
+        // theme color (black in Lavanda) and be unreadable on a dark background.
         this._prefsItem.label.add_style_class_name('disk-temp-menu-text');
 
         this._applyMenuTheme();
 
-        // A kuszob megvaltoztatja, hogy melyik diszk esik a szuresbe, tehat a
-        // panel szerkezetet is ujra kell epiteni, nem csak ujraszinezni.
+        // A threshold change affects which disks pass the filter, so the panel
+        // structure must be rebuilt rather than merely recolored.
         for (let key of ['threshold-hdd-warm', 'threshold-hdd-hot',
                          'threshold-ssd-warm', 'threshold-ssd-hot',
                          'threshold-nvme-warm', 'threshold-nvme-hot',
@@ -210,8 +210,8 @@ class DiskTempsButton extends PanelMenu.Button {
         this._restartTimer();
     }
 
-    // Kuszobok es szinek a beallitasokbol, cache-elve: a render 7+ labelt fest
-    // minden korben, nem akarunk annyi GSettings olvasast.
+    // Cache thresholds and colors from settings: rendering colors at least
+    // seven labels each cycle, and that should not require as many GSettings reads.
     _loadAppearance() {
         this._thresholds = {
             hdd: {
@@ -304,22 +304,22 @@ class DiskTempsButton extends PanelMenu.Button {
         return Domain.levelForTemperature(temp, kind, this._thresholds);
     }
 
-    // Ket helyen kell -- a menu sorban es a panel labelen -- ezert egy helyen
-    // szamoljuk, kulonben a ket kijelzes elcsuszhatna egymastol.
+    // This is needed in two places, the menu row and the panel label, so compute
+    // it in one place to keep the two displays consistent.
     _systinLevel() {
         return Domain.systinLevel(this._systin, this._settings.get_int('alert-systin'));
     }
 
-    // Az osztaly a layoutot adja (min-width, font), a szin inline jon -- azt a
-    // stiluslap nem tudna, mert futasidoben allithato.
+    // The class provides layout (min-width, font); the color is inline because
+    // it is configurable at runtime and cannot be supplied by the stylesheet.
     _paint(actor, baseClass, level) {
         actor.set_style_class_name(`${baseClass} disk-temp-${level}`);
         actor.set_style(`color: ${this._colors[level]};`);
     }
 
-    // A shell tema szabja meg a menu hatteret; a Lavanda peldaul feher (#FFFFFF)
-    // hatteret es fekete szoveget hasznal, amiben a mi vilagos labeljeink
-    // olvashatatlanok. Ezzel a class-szal sajat sotet hattert kap a dropdown.
+    // The shell theme controls the menu background. Lavanda, for example, uses
+    // a white (#FFFFFF) background and black text, making our light labels
+    // unreadable. This class gives the drop-down its own dark background.
     _applyMenuTheme() {
         if (this._settings.get_boolean('dark-menu'))
             this.menu.actor.add_style_class_name('disk-temp-menu');
@@ -365,7 +365,7 @@ class DiskTempsButton extends PanelMenu.Button {
         }, this._cancellable);
     }
 
-    // Hotplug eventek sorozatban jönnek; egy tickbe csomagoljuk őket
+    // Hotplug events arrive in bursts; coalesce them into a single tick.
     _queueRebuild() {
         if (this._stopped || this._rebuildQueued)
             return;
@@ -396,7 +396,7 @@ class DiskTempsButton extends PanelMenu.Button {
 
             let [objects] = result;
 
-            // teljes lemez block node-ok (partíciók nélkül) → /dev/sdX
+            // Whole-disk block nodes (excluding partitions) → /dev/sdX.
             let devByDrive = {};
             for (let path in objects) {
                 let ifaces = objects[path];
@@ -427,7 +427,7 @@ class DiskTempsButton extends PanelMenu.Button {
                 let ata = ifaces[IFACE_ATA];
 
                 if (!ata) {
-                    // udisks 2.9.4 nem ismeri az NVMe-t: csak a modellnevet visszük el
+                    // udisks 2.9.4 does not recognize NVMe; retain only the model name.
                     let match = dev ? dev.match(/^(\/dev\/nvme\d+)n\d+$/) : null;
                     if (match)
                         nvmeModels[match[1]] = model;
@@ -451,7 +451,7 @@ class DiskTempsButton extends PanelMenu.Button {
                 });
             }
 
-            // eltűnt drive-ok proxyjának elengedése
+            // Release proxies belonging to drives that disappeared.
             for (let old of this._ataDrives) {
                 if (ataDrives.some(d => d.path === old.path))
                     continue;
@@ -469,8 +469,8 @@ class DiskTempsButton extends PanelMenu.Button {
                     this._createAtaProxy(drive);
             }
 
-            // Az ujraenumeralas percenkent lefut; ha a diszkkeszlet nem
-            // valtozott, ne epitsuk ujra a menut (nyitott menuben villogna).
+            // Re-enumeration runs once a minute. If the disk set has not
+            // changed, do not rebuild the menu because an open menu would flicker.
             let key = ataDrives.map(d => d.path).sort().join(',');
             if (key === this._ataKey) {
                 this._render();
@@ -512,10 +512,10 @@ class DiskTempsButton extends PanelMenu.Button {
     _refresh() {
         this._readSensors();
 
-        // Periodikus ujraenumeralas. Boot utan az udisks nem feltetlenul adta
-        // meg ki minden lemez Drive.Ata interfeszet (a RAID tagoknal a tomb
-        // osszeallitasa kozben), es az InterfacesAdded event nem mindig potolja
-        // oket -- igy egy induláskor kimaradt diszk orokre kimaradt volna.
+        // Periodic re-enumeration. During boot, udisks may not expose every
+        // disk's Drive.Ata interface yet (while assembling RAID members), and
+        // the InterfacesAdded event does not always make up for it. Otherwise,
+        // a disk missed during startup would remain missing forever.
         this._ticks = (this._ticks || 0) + 1;
         if (this._ticks % REDISCOVER_TICKS === 0) {
             this._rebuildDrives();
@@ -527,7 +527,7 @@ class DiskTempsButton extends PanelMenu.Button {
             if (!drive.proxy)
                 continue;
 
-            // nowakeup: standby lemezt nem pörgetünk fel puszta kijelzésért
+            // nowakeup: do not spin up a standby disk merely to display it.
             drive.proxy.SmartUpdateRemote({ nowakeup: GLib.Variant.new_boolean(true) },
                 (result, error) => {
                     if (this._stopped)
@@ -659,7 +659,7 @@ class DiskTempsButton extends PanelMenu.Button {
         return this._ataDrives.concat(this._nvmeDrives);
     }
 
-    // sysfs olvasás, pár mikroszekundum -- nem kell async
+    // Reading sysfs takes a few microseconds; no async operation is needed.
     _readSensors() {
         if (!this._systemMonitor)
             return;
@@ -676,7 +676,7 @@ class DiskTempsButton extends PanelMenu.Button {
             if (rpm > 0)
                 this._fanSeen.add(descriptor.id);
             if (!this._fanSeen.has(descriptor.id))
-                continue;   // üres header, sose forgott -- nem listázzuk
+                continue;   // Empty header that never spun; do not list it.
 
             let pwm = Hardware.readInt(descriptor.pwmPath);
             fans.push({
@@ -696,8 +696,8 @@ class DiskTempsButton extends PanelMenu.Button {
             : _('system');
     }
 
-    // Riasztási források: rendszer-/ház-hőfok, HDD-hőfok és egy korábban már
-    // forgó, alaplapi hwmon ventilátor leállása.
+    // Alert sources: system/case temperature, HDD temperature, and a motherboard
+    // hwmon fan that was previously spinning but has stopped.
     _alerts() {
         let list = [];
 
@@ -732,7 +732,7 @@ class DiskTempsButton extends PanelMenu.Button {
         return drives.sort(Domain.compareDevices);
     }
 
-    // egy panel-label szovege: [dev] [tipus] hofok
+    // Text of a panel label: [device] [type] temperature.
     _panelText(drive) {
         let value;
         if (drive.temp === null)
@@ -750,10 +750,10 @@ class DiskTempsButton extends PanelMenu.Button {
         return parts.filter(p => p !== '').join(' ');
     }
 
-    // A panel-labelek egyszer készülnek el; a render csak a szövegüket írja át.
-    // force=true → struktúra újraépítése (mód-, sorrend- vagy diszklista-váltás).
-    // Mibol all a panel felepitese. Egy helyen szamoljuk, hogy a _syncPanel es a
-    // _render ne tudjon elcsuszni egymastol (kulonben vegtelen ujraepites lenne).
+    // Panel labels are created once; rendering only updates their text.
+    // force=true → rebuild the structure after a mode, order, or disk-list change.
+    // Describe the panel structure in one place so _syncPanel and _render cannot
+    // diverge, which would cause endless rebuilding.
     _structureKey(drives) {
         return [
             this._settings.get_string('panel-mode'),
@@ -761,9 +761,9 @@ class DiskTempsButton extends PanelMenu.Button {
             this._settings.get_boolean('show-icon'),
             this._settings.get_boolean('show-type'),
             this._settings.get_boolean('panel-only-warm'),
-            // A rendszerhőfok label jön/megy, tehát a szerkezet része; a
-            // szenzor elérhetősége is, különben egy később megjelenő hwmon
-            // csatorna nem kerülne ki.
+            // The system-temperature label appears and disappears, so it is
+            // part of the structure. Sensor availability is included too, or a
+            // hwmon channel that appears later would never be displayed.
             this._settings.get_boolean('show-systin'),
             this._systemMonitor !== null,
             drives.map(d => d.dev).join(','),
@@ -794,8 +794,8 @@ class DiskTempsButton extends PanelMenu.Button {
                 this._panelBox.add_child(this._panelIcon);
             }
 
-            // Ház-/rendszerhőfok fix helyen, a diszkek előtt. Ha nincs
-            // felismerhető hwmon csatorna, a label ne foglaljon helyet.
+            // Keep case/system temperature in a fixed position before the disks.
+            // If no recognized hwmon channel exists, the label takes no space.
             if (this._settings.get_boolean('show-systin') &&
                 this._systemMonitor !== null) {
                 let label = new St.Label({
@@ -816,7 +816,7 @@ class DiskTempsButton extends PanelMenu.Button {
                 this._panelBox.add_child(label);
                 this._panelItems.set('__hottest__', label);
             } else if (drives.length === 0) {
-                // szures aktiv es minden diszk hideg -- ne maradjon puszta ikon
+                // Filtering is active and all disks are cool; do not leave only an icon.
                 let label = new St.Label({
                     text: 'OK',
                     style_class: 'disk-temp-panel-item disk-temp-cool',
@@ -848,7 +848,7 @@ class DiskTempsButton extends PanelMenu.Button {
         if (drives.length !== this._rows.size)
             this._rebuildRows();
 
-        // panel struktúra követi a sorrend-beállítást és a diszklistát
+        // The panel structure follows the order setting and the disk list.
         let mode = this._settings.get_string('panel-mode');
         let panelDrives = this._panelDrives();
         if (this._structureKey(panelDrives) !== this._panelStructure) {
@@ -867,20 +867,20 @@ class DiskTempsButton extends PanelMenu.Button {
             }
         }
 
-        // --- ház-szenzorok és riasztás ---
+        // --- Case sensors and alerts ---
         this._renderSensors();
         let alerts = this._alerts();
         if (alerts.length > 0) {
             this._alertItem.label.set_text(`⚠ ${alerts.join('  ·  ')}`);
-            // a riasztas sor is a beallitott "forro" szint hasznalja
+            // The alert row also uses the configured hot-level color.
             this._alertItem.label.set_style(`color: ${this._colors.hot}; font-weight: bold;`);
             this._alertItem.visible = true;
         } else {
             this._alertItem.visible = false;
         }
 
-        // --- panel ---
-        // az ikon a legsúlyosabb diszk-állapotot mutatja; riasztás felülírja
+        // --- Panel ---
+        // The icon shows the most severe disk state; an alert overrides it.
         if (this._panelIcon) {
             let level = alerts.length > 0
                 ? 'hot'
@@ -888,7 +888,7 @@ class DiskTempsButton extends PanelMenu.Button {
             this._paint(this._panelIcon, 'system-status-icon disk-temp-icon', level);
         }
 
-        // ház hőfok: mindkét panel-mode-ban, a szűréstől függetlenül
+        // Case temperature: in both panel modes, regardless of filtering.
         let systinLabel = this._panelItems.get('__systin__');
         if (systinLabel) {
             let sensorName = this._systemTemperatureName();
@@ -914,9 +914,9 @@ class DiskTempsButton extends PanelMenu.Button {
         } else {
             let okLabel = this._panelItems.get('__ok__');
             if (okLabel) {
-                // Minden diszk a sarga kuszob alatt. Ha viszont riasztas van
-                // (meleg haz vagy leallt ventilator), az kerul ide -- kulonben
-                // egy "OK" moge rejtenenk el a problemat.
+                // Every disk is below its warm threshold. If there is an alert
+                // (a warm case or stopped fan), show it here instead, or the
+                // problem would be hidden behind “OK”.
                 if (alerts.length > 0) {
                     okLabel.set_text(alerts[0]);
                     this._paint(okLabel, 'disk-temp-panel-item', 'hot');
@@ -936,7 +936,7 @@ class DiskTempsButton extends PanelMenu.Button {
             }
         }
 
-        // --- menü: mindig hőfok szerint csökkenő ---
+        // --- Menu: always sorted by descending temperature ---
         let sorted = drives.slice().sort(Domain.compareDrivesByTemperature);
         sorted.forEach((drive, index) => {
             let row = this._rows.get(drive.dev);
@@ -967,8 +967,8 @@ class DiskTempsButton extends PanelMenu.Button {
         this._footer.label.set_text(footer);
     }
 
-    // Szenzor-sorok: felismert rendszerhőfok + az ugyanazon hwmon eszközön
-    // található ventilátorok, amiket már láttunk forogni.
+    // Sensor rows: the recognized system temperature plus fans on the same
+    // hwmon device that have already been seen spinning.
     _syncSensorRows() {
         let show = this._settings.get_boolean('show-sensors') &&
             this._systemMonitor !== null;
@@ -1033,7 +1033,7 @@ class DiskTempsButton extends PanelMenu.Button {
         }
     }
 
-    // A menüsorok is egyszer készülnek el — nyitott menüben nem villog a lista.
+    // Menu rows are also created only once, so an open menu does not flicker.
     _rebuildRows() {
         this._section.removeAll();
         this._rows.clear();
@@ -1137,7 +1137,7 @@ function removeFromPanel() {
     }
 }
 
-// panel-position / panel-index csak újralétrehozással mozdítható
+// panel-position and panel-index can only be changed by recreating the indicator.
 function repositionIndicator() {
     removeFromPanel();
     addToPanel();

@@ -25,7 +25,7 @@ function addSection(grid, row, title) {
     grid.attach(label, 0, row, 2, 1);
 }
 
-// GSettings-ben #rrggbb-t tarolunk; a Gtk.ColorButton Gdk.RGBA-val dolgozik.
+// GSettings stores #rrggbb; Gtk.ColorButton works with Gdk.RGBA.
 function colorFor(settings, key) {
     let rgba = new Gdk.RGBA();
     if (!rgba.parse(settings.get_string(key)))
@@ -117,7 +117,7 @@ function buildPrefsPage(settings, language) {
         margin_start: 24,
         margin_end: 24,
         column_homogeneous: false,
-        valign: Gtk.Align.START,   // ne nyuljon, a ScrolledWindow gorgesse
+        valign: Gtk.Align.START,   // Do not stretch; let the ScrolledWindow scroll.
     });
 
     let row = 0;
@@ -240,11 +240,11 @@ function buildPrefsPage(settings, language) {
     addRow(grid, row++, _('Unknown / read error'), colorFor(settings, 'color-na'),
         _('Color used when a reading failed (n/a) or no data is available yet.'));
 
-    // A GNOME 40 prefs ablaka fix meretu es a widgetet nem gorgeti, csak
-    // levagja -- 14 sorral mar nem latszott az alja. ScrolledWindow-ba tesszuk.
-    // min_content_* adja a kert kezdomeretet; a natural height-et NEM
-    // propagaljuk, kulonben ugyanolyan magas maradna, mint a grid, es semmit
-    // nem javitanank.
+    // The GNOME 40 preferences window has a fixed size and clips the widget
+    // instead of scrolling it; with 14 rows, the bottom was no longer visible.
+    // Put it in a ScrolledWindow. min_content_* provides the requested initial
+    // size. Do NOT propagate the natural height, or it would remain as tall as
+    // the grid and solve nothing.
     let scrolled = new Gtk.ScrolledWindow({
         hscrollbar_policy: Gtk.PolicyType.NEVER,
         vscrollbar_policy: Gtk.PolicyType.AUTOMATIC,
