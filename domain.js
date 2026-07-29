@@ -30,6 +30,15 @@ var kelvinToCelsius = function (kelvin) {
     return Math.round(kelvin - 273.15);
 };
 
+// Az nvme-cli JSON kimenete verziótól függően nyers Kelvint vagy már Celsius
+// értéket adhat. A reális Celsius-tartománytól messze lévő számot Kelvinnek
+// tekintjük.
+var nvmeTemperatureToCelsius = function (value) {
+    if (typeof value !== 'number' || value <= 0)
+        return null;
+    return value > 200 ? kelvinToCelsius(value) : Math.round(value);
+};
+
 var shortDevice = function (device) {
     return (device || '').replace(/^\/dev\//, '');
 };

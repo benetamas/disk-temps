@@ -15,23 +15,13 @@ const PopupMenu = imports.ui.popupMenu;
 
 const Me = ExtensionUtils.getCurrentExtension();
 const Domain = Me.imports.domain;
+const Hardware = Me.imports.hardware;
 const ICON_FILE = `${Me.path}/icons/disk-temperature-symbolic.svg`;
 
-const NVME_DEVICES = ['/dev/nvme0', '/dev/nvme1'];
-
-// Ennyi frissitesi kor utan ujraenumeraljuk az udisks diszkeket. Kell, mert
-// boot utan az udisks kesobb adja ki egyes lemezek Drive.Ata interfeszet.
+// Ennyi frissítési kör után újraenumeráljuk az udisks, NVMe és hwmon
+// eszközöket. Boot után egyes interfészek később jelenhetnek meg, és a
+// hotplugot sem minden régi udisks verzió jelzi teljesen.
 const REDISCOVER_TICKS = 12;
-const SUDO = '/usr/bin/sudo';
-const NVME = '/usr/sbin/nvme';
-
-// Super I/O chip a haz-szenzorokhoz (SYSTIN, ventilator RPM)
-const HWMON_CHIP = 'nct6798';
-const HWMON_FAN_CHANNELS = 7;
-// Amit meressel azonositottunk ezen az alaplapon (ASRock Z490 Pro4).
-// A 4/5/6 mind SYSTIN-vezerelt haz-ventilator (temp_sel=1); a header szama
-// kulonbozteti meg oket. Az fan1/fan3/fan7 ures (100% PWM-en is 0 RPM).
-const FAN_NAMES = { 2: 'CPU', 4: 'ház', 5: 'ház', 6: 'ház' };
 
 const UDISKS_NAME = 'org.freedesktop.UDisks2';
 const UDISKS_PATH = '/org/freedesktop/UDisks2';
@@ -89,36 +79,6 @@ function bytestring(value) {
     return nul < 0 ? str : str.slice(0, nul);
 }
 
-// --- haz-szenzorok (nct6798 hwmon, vilagolvashato sysfs, nem kell jog) ---
-
-function readSysfsInt(path) {
-    try {
-        let [ok, bytes] = GLib.file_get_contents(path);
-        if (!ok)
-            return null;
-
-        let value = parseInt(ByteArray.toString(bytes).trim(), 10);
-        return Number.isFinite(value) ? value : null;
-    } catch (e) {
-        return null;
-    }
-}
-
-// A hwmon INDEX bootonkent valtozhat, ezert nev szerint keressuk a chipet.
-function findHwmon(chip) {
-    for (let i = 0; i < 16; i++) {
-        let dir = `/sys/class/hwmon/hwmon${i}`;
-        try {
-            let [ok, bytes] = GLib.file_get_contents(`${dir}/name`);
-            if (ok && ByteArray.toString(bytes).trim() === chip)
-                return dir;
-        } catch (e) {
-            // nincs ilyen hwmon index, megyunk tovabb
-        }
-    }
-    return null;
-}
-
 let DiskTempsButton = GObject.registerClass(
 class DiskTempsButton extends PanelMenu.Button {
     _init(settings) {
@@ -135,21 +95,17 @@ class DiskTempsButton extends PanelMenu.Button {
         this._loadAppearance();
 
         this._ataDrives = [];       // udisks-ból, SmartTemperature-rel
-        this._nvmeDrives = NVME_DEVICES.map(path => ({
-            path,
-            dev: path,
-            model: '',
-            kind: 'nvme',     // kuszob-osztaly
-            type: 'NVMe',     // kijelzett tipus
-            temp: null,
-            standby: false,
-            failed: false,
-        }));
+        this._nvmeDrives = [];
         this._nvmeBusy = 0;
         this._nvmeFailLogged = false;
         this._smartFailLogged = false;
+        this._nvmeExecutable = Hardware.findExecutable('nvme',
+            ['/usr/bin/nvme', '/usr/sbin/nvme', '/bin/nvme', '/sbin/nvme']);
+        this._sudoExecutable = Hardware.findExecutable('sudo',
+            ['/usr/bin/sudo', '/bin/sudo']);
+        this._discoverNvmeDrives(false);
 
-        this._hwmon = findHwmon(HWMON_CHIP);
+        this._systemMonitor = Hardware.discoverSystemMonitor();
         this._systin = null;
         this._fans = [];
         // Amit egyszer forogni lattunk, azt tovabb figyeljuk -- igy egy kesobb
@@ -269,6 +225,71 @@ class DiskTempsButton extends PanelMenu.Button {
             this._colors[level] = Domain.sanitizeColor(
                 this._settings.get_string(`color-${level}`), Domain.DEFAULT_COLORS[level]);
         }
+    }
+
+    _discoverNvmeDrives(updateUi) {
+        if (this._nvmeBusy > 0)
+            return;
+
+        this._nvmeExecutable = Hardware.findExecutable('nvme',
+            ['/usr/bin/nvme', '/usr/sbin/nvme', '/bin/nvme', '/sbin/nvme']);
+        this._sudoExecutable = Hardware.findExecutable('sudo',
+            ['/usr/bin/sudo', '/bin/sudo']);
+
+        let previous = new Map(this._nvmeDrives.map(drive => [drive.path, drive]));
+        let oldKey = this._nvmeDrives.map(drive => drive.path).join(',');
+        let discovered = Hardware.discoverNvmeControllers();
+
+        this._nvmeDrives = discovered.map(device => {
+            let existing = previous.get(device.path);
+            if (existing) {
+                existing.dev = device.dev;
+                existing.model = device.model || existing.model;
+                existing.temperaturePath = device.temperaturePath;
+                return existing;
+            }
+
+            return {
+                path: device.path,
+                dev: device.dev,
+                model: device.model,
+                temperaturePath: device.temperaturePath,
+                kind: 'nvme',
+                type: 'NVMe',
+                temp: null,
+                standby: false,
+                failed: false,
+                failureReason: null,
+            };
+        });
+
+        let newKey = this._nvmeDrives.map(drive => drive.path).join(',');
+        if (!updateUi || oldKey === newKey)
+            return;
+
+        log(`disk-temps: NVMe lista változott (${this._nvmeDrives.length} eszköz)`);
+        this._rebuildRows();
+        this._syncPanel(true);
+    }
+
+    _discoverSystemMonitor(updateUi) {
+        let previousKey = this._systemMonitor
+            ? `${this._systemMonitor.temperature.inputPath}|` +
+              this._systemMonitor.fans.map(fan => fan.id).join(',')
+            : '';
+        let monitor = Hardware.discoverSystemMonitor();
+        let nextKey = monitor
+            ? `${monitor.temperature.inputPath}|${monitor.fans.map(fan => fan.id).join(',')}`
+            : '';
+
+        this._systemMonitor = monitor;
+        if (!updateUi || previousKey === nextKey)
+            return;
+
+        this._systin = null;
+        this._fans = [];
+        this._sensorStructure = null;
+        this._syncPanel(true);
     }
 
     _level(temp, kind) {
@@ -488,8 +509,11 @@ class DiskTempsButton extends PanelMenu.Button {
         // osszeallitasa kozben), es az InterfacesAdded event nem mindig potolja
         // oket -- igy egy induláskor kimaradt diszk orokre kimaradt volna.
         this._ticks = (this._ticks || 0) + 1;
-        if (this._ticks % REDISCOVER_TICKS === 0)
+        if (this._ticks % REDISCOVER_TICKS === 0) {
             this._rebuildDrives();
+            this._discoverNvmeDrives(true);
+            this._discoverSystemMonitor(true);
+        }
 
         for (let drive of this._ataDrives) {
             if (!drive.proxy)
@@ -528,16 +552,24 @@ class DiskTempsButton extends PanelMenu.Button {
     }
 
     _readNvme(entry) {
-        let proc;
-        try {
-            proc = Gio.Subprocess.new(
-                [SUDO, '-n', NVME, 'smart-log', '-o', 'json', entry.path],
-                Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
-        } catch (e) {
+        if (entry.temperaturePath) {
+            let raw = Hardware.readInt(entry.temperaturePath);
+            if (raw !== null) {
+                entry.temp = Math.round(raw / 1000);
+                entry.failed = false;
+                entry.failureReason = null;
+                this._lastUpdate = new Date();
+                this._render();
+                return;
+            }
+        }
+
+        if (!this._nvmeExecutable) {
             entry.temp = null;
             entry.failed = true;
+            entry.failureReason = 'Az nvme-cli nem található';
             if (!this._nvmeFailLogged) {
-                logError(e, 'disk-temps: nvme spawn hiba');
+                log('disk-temps: az nvme-cli nem található, és nincs NVMe hwmon hőfok');
                 this._nvmeFailLogged = true;
             }
             this._render();
@@ -545,24 +577,23 @@ class DiskTempsButton extends PanelMenu.Button {
         }
 
         this._nvmeBusy++;
-        proc.communicate_utf8_async(null, this._cancellable, (p, res) => {
+        let directCommand = [
+            this._nvmeExecutable,
+            'smart-log',
+            '-o',
+            'json',
+            entry.path,
+        ];
+
+        let finish = error => {
             this._nvmeBusy--;
-            if (this._stopped)
-                return;
-
             try {
-                let [, stdout, stderr] = p.communicate_utf8_finish(res);
-                if (!p.get_successful()) {
-                    let detail = (stderr || '').trim() || `exit ${p.get_exit_status()}`;
-                    throw new Error(`${entry.path}: ${detail}`);
-                }
-
-                let data = JSON.parse(stdout);
-                entry.temp = Domain.kelvinToCelsius(data.temperature);
-                entry.failed = false;
+                if (error)
+                    throw error;
             } catch (e) {
                 entry.temp = null;
                 entry.failed = true;
+                entry.failureReason = e.message || String(e);
                 if (!this._nvmeFailLogged) {
                     logError(e, 'disk-temps: nvme smart-log olvasás sikertelen');
                     this._nvmeFailLogged = true;
@@ -571,35 +602,79 @@ class DiskTempsButton extends PanelMenu.Button {
 
             this._lastUpdate = new Date();
             this._render();
-        });
+        };
+
+        let run = (command, allowSudoFallback) => {
+            let proc;
+            try {
+                proc = Gio.Subprocess.new(
+                    command,
+                    Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
+            } catch (e) {
+                finish(e);
+                return;
+            }
+
+            proc.communicate_utf8_async(null, this._cancellable, (p, res) => {
+                if (this._stopped) {
+                    this._nvmeBusy--;
+                    return;
+                }
+
+                try {
+                    let [, stdout, stderr] = p.communicate_utf8_finish(res);
+                    if (!p.get_successful()) {
+                        if (allowSudoFallback && this._sudoExecutable) {
+                            run([this._sudoExecutable, '-n'].concat(directCommand), false);
+                            return;
+                        }
+
+                        let detail = (stderr || '').trim() || `exit ${p.get_exit_status()}`;
+                        throw new Error(`${entry.path}: ${detail}`);
+                    }
+
+                    let data = JSON.parse(stdout);
+                    entry.temp = Domain.nvmeTemperatureToCelsius(data.temperature);
+                    entry.failed = false;
+                    entry.failureReason = null;
+                    finish(null);
+                } catch (e) {
+                    finish(e);
+                }
+            });
+        };
+
+        run(directCommand, true);
     }
 
     _allDrives() {
         return this._ataDrives.concat(this._nvmeDrives);
     }
 
-    // sysfs olvasas, par mikroszekundum -- nem kell async
+    // sysfs olvasás, pár mikroszekundum -- nem kell async
     _readSensors() {
-        if (!this._hwmon)
+        if (!this._systemMonitor)
             return;
 
-        let raw = readSysfsInt(`${this._hwmon}/temp1_input`);
+        let raw = Hardware.readInt(this._systemMonitor.temperature.inputPath);
         this._systin = raw === null ? null : Math.round(raw / 1000);
 
         let fans = [];
-        for (let i = 1; i <= HWMON_FAN_CHANNELS; i++) {
-            let rpm = readSysfsInt(`${this._hwmon}/fan${i}_input`);
+        for (let descriptor of this._systemMonitor.fans) {
+            let rpm = Hardware.readInt(descriptor.inputPath);
             if (rpm === null)
                 continue;
 
             if (rpm > 0)
-                this._fanSeen.add(i);
-            if (!this._fanSeen.has(i))
-                continue;   // ures header, sose forgott -- nem listazzuk
+                this._fanSeen.add(descriptor.id);
+            if (!this._fanSeen.has(descriptor.id))
+                continue;   // üres header, sose forgott -- nem listázzuk
 
-            let pwm = readSysfsInt(`${this._hwmon}/pwm${i}`);
+            let pwm = Hardware.readInt(descriptor.pwmPath);
             fans.push({
-                index: i,
+                id: descriptor.id,
+                index: descriptor.index,
+                name: descriptor.name,
                 rpm,
                 duty: pwm === null ? null : Math.round(pwm * 100 / 255),
             });
@@ -607,15 +682,20 @@ class DiskTempsButton extends PanelMenu.Button {
         this._fans = fans;
     }
 
-    // Mi indokol riasztast? A tapra kotott ventilatorok RPM-je nem olvashato
-    // (a tacho vezetek nincs bekotve), ezert a kovetkezmenyt figyeljuk:
-    // haz-ambient, HDD homerseklet, es a mar ismert ventilatorok leallasa.
+    _systemTemperatureName() {
+        return this._systemMonitor
+            ? this._systemMonitor.temperature.label
+            : 'rendszer';
+    }
+
+    // Riasztási források: rendszer-/ház-hőfok, HDD-hőfok és egy korábban már
+    // forgó, alaplapi hwmon ventilátor leállása.
     _alerts() {
         let list = [];
 
         let sysLimit = this._settings.get_int('alert-systin');
         if (sysLimit > 0 && this._systin !== null && this._systin >= sysLimit)
-            list.push(`SYSTIN ${this._systin}°C (≥${sysLimit})`);
+            list.push(`${this._systemTemperatureName()} ${this._systin}°C (≥${sysLimit})`);
 
         let hddLimit = this._settings.get_int('alert-hdd');
         if (hddLimit > 0) {
@@ -627,7 +707,7 @@ class DiskTempsButton extends PanelMenu.Button {
 
         for (let fan of this._fans) {
             if (fan.rpm === 0)
-                list.push(`fan${fan.index}${FAN_NAMES[fan.index] ? ' (' + FAN_NAMES[fan.index] + ')' : ''} áll`);
+                list.push(`${fan.name} áll`);
         }
 
         return list;
@@ -673,10 +753,11 @@ class DiskTempsButton extends PanelMenu.Button {
             this._settings.get_boolean('show-icon'),
             this._settings.get_boolean('show-type'),
             this._settings.get_boolean('panel-only-warm'),
-            // a SYSTIN label jon/megy, tehat a szerkezet resze; a szenzor
-            // elerhetosege is, kulonben egy kesobb megtalalt hwmon nem jelenne meg
+            // A rendszerhőfok label jön/megy, tehát a szerkezet része; a
+            // szenzor elérhetősége is, különben egy később megjelenő hwmon
+            // csatorna nem kerülne ki.
             this._settings.get_boolean('show-systin'),
-            this._hwmon !== null,
+            this._systemMonitor !== null,
             drives.map(d => d.dev).join(','),
         ].join('|');
     }
@@ -705,13 +786,12 @@ class DiskTempsButton extends PanelMenu.Button {
                 this._panelBox.add_child(this._panelIcon);
             }
 
-            // Haz hofok fix helyen, a diszkek ELOTT: a diszklista hossza a
-            // szuresstol fugg, a haz-ertek nem ugralhat vizszintesen.
-            // Ha nincs nct6798, a label meg se jelenjen -- ne foglaljon helyet
-            // egy orok n/a.
-            if (this._settings.get_boolean('show-systin') && this._hwmon !== null) {
+            // Ház-/rendszerhőfok fix helyen, a diszkek előtt. Ha nincs
+            // felismerhető hwmon csatorna, a label ne foglaljon helyet.
+            if (this._settings.get_boolean('show-systin') &&
+                this._systemMonitor !== null) {
                 let label = new St.Label({
-                    text: 'ház …',
+                    text: `${this._systemTemperatureName()} …`,
                     style_class: 'disk-temp-panel-item',
                     y_align: Clutter.ActorAlign.CENTER,
                 });
@@ -803,7 +883,10 @@ class DiskTempsButton extends PanelMenu.Button {
         // ház hőfok: mindkét panel-mode-ban, a szűréstől függetlenül
         let systinLabel = this._panelItems.get('__systin__');
         if (systinLabel) {
-            systinLabel.set_text(this._systin === null ? 'ház n/a' : `ház ${this._systin}°`);
+            let sensorName = this._systemTemperatureName();
+            systinLabel.set_text(this._systin === null
+                ? `${sensorName} n/a`
+                : `${sensorName} ${this._systin}°`);
             this._paint(systinLabel, 'disk-temp-panel-item', this._systinLevel());
         }
 
@@ -871,15 +954,17 @@ class DiskTempsButton extends PanelMenu.Button {
         let stamp = this._lastUpdate ? this._lastUpdate.toLocaleTimeString() : '–';
         let footer = `Frissítve: ${stamp}`;
         if (this._nvmeDrives.some(d => d.failed))
-            footer += ' · NVMe: sudo olvasás sikertelen';
+            footer += ' · NVMe: olvasás sikertelen';
 
         this._footer.label.set_text(footer);
     }
 
-    // Szenzor-sorok: SYSTIN + azok a ventilátorok, amiket már láttunk forogni.
+    // Szenzor-sorok: felismert rendszerhőfok + az ugyanazon hwmon eszközön
+    // található ventilátorok, amiket már láttunk forogni.
     _syncSensorRows() {
-        let show = this._settings.get_boolean('show-sensors') && this._hwmon !== null;
-        let key = show ? `on|${this._fans.map(f => f.index).join(',')}` : 'off';
+        let show = this._settings.get_boolean('show-sensors') &&
+            this._systemMonitor !== null;
+        let key = show ? `on|${this._fans.map(fan => fan.id).join(',')}` : 'off';
         if (key === this._sensorStructure)
             return;
 
@@ -910,13 +995,9 @@ class DiskTempsButton extends PanelMenu.Button {
             this._sensorSection.addMenuItem(item);
         };
 
-        makeRow('systin', 'ház (SYSTIN)');
+        makeRow('systin', this._systemTemperatureName());
         for (let fan of this._fans)
-            makeRow(`fan${fan.index}`, this._fanLabel(fan.index));
-    }
-
-    _fanLabel(index) {
-        return FAN_NAMES[index] ? `fan${index} (${FAN_NAMES[index]})` : `fan${index}`;
+            makeRow(fan.id, fan.name);
     }
 
     _renderSensors() {
@@ -931,7 +1012,7 @@ class DiskTempsButton extends PanelMenu.Button {
         }
 
         for (let fan of this._fans) {
-            let row = this._sensorRows.get(`fan${fan.index}`);
+            let row = this._sensorRows.get(fan.id);
             if (!row)
                 continue;
 

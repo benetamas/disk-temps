@@ -136,7 +136,7 @@ function buildPrefsWidget() {
             ['all', 'Minden diszk hőfoka'],
             ['hottest', 'Csak a legmelegebb'],
         ]),
-        'A legördülő menüben mindig mind a hét diszk látszik.');
+        'A legördülő menüben mindig minden felismert diszk látszik.');
 
     let iconSwitch = new Gtk.Switch({ active: settings.get_boolean('show-icon') });
     settings.bind('show-icon', iconSwitch, 'active', Gio.SettingsBindFlags.DEFAULT);
@@ -160,8 +160,8 @@ function buildPrefsWidget() {
 
     let systinSwitch = new Gtk.Switch({ active: settings.get_boolean('show-systin') });
     settings.bind('show-systin', systinSwitch, 'active', Gio.SettingsBindFlags.DEFAULT);
-    addRow(grid, row++, 'Ház hőfok a panelen', systinSwitch,
-        'A SYSTIN a panelen, az ikon után: „ház 38°”. Ez vezérli a ventilátor-görbét és előbb emelkedik, mint a lemezek — a szűrés nem érinti, hidegen is látszik. Színe a SYSTIN riasztási küszöbhöz igazodik.');
+    addRow(grid, row++, 'Rendszerhőfok a panelen', systinSwitch,
+        'A felismert SYSTIN/System/Motherboard/Ambient hwmon szenzor az ikon után, saját nevével. A szűrés nem érinti, hidegen is látszik.');
 
     addRow(grid, row++, 'Panel sorrend',
         comboFor(settings, 'panel-order', [
@@ -181,12 +181,12 @@ function buildPrefsWidget() {
 
     let sensorSwitch = new Gtk.Switch({ active: settings.get_boolean('show-sensors') });
     settings.bind('show-sensors', sensorSwitch, 'active', Gio.SettingsBindFlags.DEFAULT);
-    addRow(grid, row++, 'Ház-szenzorok a menüben', sensorSwitch,
-        'SYSTIN (ház-ambient) és a mérhető ventilátorok RPM-je. Ami egyszer forgott, azt onnantól figyeli — ha leáll, „ÁLL” lesz belőle.');
+    addRow(grid, row++, 'Rendszerszenzorok a menüben', sensorSwitch,
+        'A felismert rendszerhőfok és az ugyanazon alaplapi hwmon eszköz mérhető ventilátorai. Ami egyszer forgott, azt onnantól figyeli.');
 
-    addRow(grid, row++, 'Riasztás: SYSTIN (°C)',
+    addRow(grid, row++, 'Riasztás: rendszerhőfok (°C)',
         spinFor(settings, 'alert-systin', 0, 90),
-        'Ház-ambient küszöb. Default 44; 41 °C-tól sárga, 44 °C-tól piros. 0 = kikapcsolva.');
+        'Alapértelmezetten 44; 3 fokkal előtte sárga. A szenzor helye alaplapfüggő, ezért szükség esetén igazítsd a géphez. 0 = kikapcsolva.');
 
     addRow(grid, row++, 'Riasztás: HDD (°C)',
         spinFor(settings, 'alert-hdd', 0, 90),

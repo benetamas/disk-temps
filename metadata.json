@@ -1,5 +1,5 @@
 {
-  "description": "Diszk hőmérsékletek a felső panelen (udisks2 + nvme-cli)",
+  "description": "HDD, SATA SSD és NVMe hőmérsékletek a felső panelen",
   "name": "Disk Temperatures",
   "settings-schema": "org.gnome.shell.extensions.disk-temps",
   "shell-version": [
@@ -7,5 +7,5 @@
   ],
   "url": "https://github.com/benetamas/disk-temps",
   "uuid": "disk-temps@lycantrop.hu",
-  "version": 2
+  "version": 3
 }

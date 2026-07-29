@@ -142,21 +142,21 @@
 
     <key name="show-systin" type="b">
       <default>true</default>
-      <summary>Ház hőfok a panelen</summary>
-      <description>A SYSTIN (ház-ambient) hőfok a panelen, az ikon után, a diszkek előtt. Ez a vezető indikátor: ez vezérli a ventilátor-görbét, és előbb emelkedik, mint a lemezek hőfoka. A panel-only-warm szűrés nem érinti, akkor is látszik, ha hideg.</description>
+      <summary>Rendszerhőfok a panelen</summary>
+      <description>A felismert SYSTIN, System, Motherboard, Chassis vagy Ambient hwmon szenzor hőfoka a panelen. A panel-only-warm szűrés nem érinti.</description>
     </key>
 
     <key name="show-sensors" type="b">
       <default>true</default>
-      <summary>Ház-szenzorok a menüben</summary>
-      <description>SYSTIN (ház-ambient) és a mérhető ventilátorok RPM-je a menü alján.</description>
+      <summary>Rendszerszenzorok a menüben</summary>
+      <description>A felismert rendszerhőfok és az ugyanazon alaplapi hwmon eszköz mérhető ventilátorainak RPM-je a menü alján.</description>
     </key>
 
     <key name="alert-systin" type="i">
       <default>44</default>
       <range min="0" max="90"/>
-      <summary>SYSTIN riasztási küszöb (°C)</summary>
-      <description>Ennyi fölött riaszt az ikon. 0 = kikapcsolva. A 44 azért ennyi, mert a ventilátor-görbe 42 °C-on már 100%-on van: ha a ház ezt is átlépi, akkor a hűtés tényleg nem elég. Terhelés alatt a 39-40 °C normális.</description>
+      <summary>Rendszerhőfok riasztási küszöb (°C)</summary>
+      <description>Ennyi fölött riaszt az ikon; 3 °C-kal alatta sárga. A hwmon szenzor fizikai helye alaplapfüggő, ezért a küszöb a géphez igazítható. 0 = kikapcsolva.</description>
     </key>
 
     <key name="alert-hdd" type="i">

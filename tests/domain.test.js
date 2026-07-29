@@ -31,6 +31,8 @@ function drive(dev, temp, kind = 'ssd') {
 
 assertEqual(Domain.kelvinToCelsius(303.15), 30, 'Kelvin conversion');
 assertEqual(Domain.kelvinToCelsius(0), null, 'Invalid Kelvin value');
+assertEqual(Domain.nvmeTemperatureToCelsius(309), 36, 'NVMe Kelvin conversion');
+assertEqual(Domain.nvmeTemperatureToCelsius(36), 36, 'NVMe Celsius passthrough');
 assertEqual(Domain.shortDevice('/dev/sda'), 'sda', 'Device prefix removal');
 assertEqual(Domain.shortModel('Samsung  SSD 870 EVO'), 'SSD 870 EVO', 'Model prefix removal');
 assertEqual(Domain.shortModel('1234567890123456789012345'), '12345678901234567890123…',

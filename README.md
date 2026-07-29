@@ -1,24 +1,29 @@
 # Disk Temperatures
 
-GNOME Shell 40 extension. Default: a panel **bal** oldalán mind a 7 diszk hőfoka
-dev címkével (`sdb 54° sde 50° …`), a legördülő menüben modellnévvel és hőfok
-szerint rendezve.
+GNOME Shell 40 extension. Alapértelmezésben a panel **bal** oldalán minden
+felismert diszk hőfoka megjelenik eszközcímkével (`sdb 54° nvme0 50° …`), a
+legördülő menüben modellnévvel és hőfok szerint rendezve.
 
-## Adatforrások
+## Adatforrások és automatikus felderítés
 
-| Diszktípus | Forrás | Privilégium |
+| Eszköz | Forrás | Privilégium |
 |---|---|---|
-| SATA (sda–sde) | udisks2 D-Bus: `Drive.Ata.SmartUpdate()` + `SmartTemperature` | nincs |
-| NVMe (nvme0, nvme1) | `sudo -n /usr/sbin/nvme smart-log -o json` | `sudo` (NOPASSWD) |
-
-Miért két forrás: ezen a gépen sem `CONFIG_SENSORS_DRIVETEMP`, sem
-`CONFIG_NVME_HWMON` nincs bekapcsolva, tehát hwmon sysfs-ből nem jön lemezhőfok.
-Az udisks2 2.9.4 csak ATA diszkeket ismer (NVMe támogatás 2.10+), ezért az NVMe
-külön ágon megy. A `/dev/nvme*` node-ok `0600 root:root`, ezért kell hozzájuk sudo.
+| ATA HDD és SATA SSD | udisks2 D-Bus: `Drive.Ata.SmartUpdate()` + `SmartTemperature` | nincs |
+| NVMe SSD | Kernel `hwmon`, ennek hiányában a felderített `nvme-cli` | általában nincs; jogosultsági hiba esetén opcionális `sudo -n` |
+| Rendszerhőmérő és ventilátorok | A `/sys/class/hwmon` felismert szenzorai | nincs |
 
 A SATA-nál nem az udisks ~10 perces SMART cache-ét olvassuk: minden körben
 `SmartUpdate()` fut, amit a polkit `org.freedesktop.udisks2.ata-smart-update`
 akció `allow_active: yes` beállítása jelszó nélkül engedélyez.
+
+Az NVMe-vezérlőket a bővítmény a `/sys/class/nvme` alatt deríti fel, ezért nincs
+beégetett eszköznév vagy darabszám. Elsőként a kernel által biztosított NVMe
+`hwmon` hőmérsékletet használja. Ennek hiányában az `nvme` programot a `PATH`,
+majd a szokásos rendszerkönyvtárak alapján keresi meg és közvetlenül futtatja.
+Csak sikertelen közvetlen olvasás után próbálkozik `sudo -n` tartalék úttal. A
+bővítmény soha nem kér jelszót; ha az adott rendszer jogosultságai miatt
+NOPASSWD szabály kell, annak a `command -v nvme` által jelzett tényleges
+programútvonalra kell vonatkoznia.
 
 ## Beállítások
 
@@ -47,9 +52,9 @@ akció `allow_active: yes` beállítása jelszó nélkül engedélyez.
 | `color-hot` | `#ff7b63` | Forró szín (riasztás és ikon is) |
 | `color-na` | `#8c8c94` | Ismeretlen / hibás olvasás |
 | `dark-menu` | `true` | Saját sötét háttér a lenyíló menünek |
-| `show-systin` | `true` | Ház hőfok a panelen (`ház 38°`), az ikon után |
-| `show-sensors` | `true` | SYSTIN + mérhető ventilátor RPM a menü alján |
-| `alert-systin` | `44` | Ház-ambient riasztási küszöb °C-ban, `0` = ki |
+| `show-systin` | `true` | Felismert rendszerhőfok a panelen, az ikon után |
+| `show-sensors` | `true` | Felismert rendszerhőfok + mérhető ventilátor-RPM a menü alján |
+| `alert-systin` | `44` | Rendszer-/alaplapszenzor riasztási küszöbe °C-ban, `0` = ki |
 | `alert-hdd` | `50` | HDD riasztási küszöb °C-ban, `0` = ki |
 
 CLI-ből is állítható:
@@ -68,10 +73,11 @@ glib-compile-schemas ~/.local/share/gnome-shell/extensions/disk-temps@lycantrop.
 
 ## Ikon
 
-`icons/disk-temperature-symbolic.svg` — saját rajz, mert az Adwaitában ezen a
-gépen nincs hőmérő ikon. A `-symbolic` névvég miatt a Shell recolorozza, így a
-`color` CSS-t követi: az ikon együtt vált sárgára/pirosra a legmelegebb diszkkel.
-Csak `fill`-t használ, `stroke`-ot nem (a GTK symbolic recolor csak a fillt írja át).
+`icons/disk-temperature-symbolic.svg` — saját rajz, ezért nem függ egy adott
+ikontéma hőmérőikon-készletétől. A `-symbolic` névvég miatt a Shell
+recolorozza, így a `color` CSS-t követi: az ikon együtt vált sárgára/pirosra a
+legmelegebb diszkkel. Csak `fill`-t használ, `stroke`-ot nem (a GTK symbolic
+recolor csak a fillt írja át).
 
 **Csapda — ne tegyél negatív margint a stylesheet.css-be.** Egy `margin-right: -2px`
 a `.disk-temp-icon`-on negatív szélességet okoz (`Actor 'StBoxLayout' tried to
@@ -123,65 +129,33 @@ sora), az kódból kap `disk-temp-menu-text`-et.
 `dark-menu = false` esetén a téma színei érvényesülnek — világos témán a
 másodlagos szövegek és a zöld/sárga hőfokok nehezen olvashatók lesznek.
 
-## Ház-szenzorok és riasztás
+## Rendszerszenzorok és ventilátorriasztás
 
-A tápra (Molex/SATA) közvetlenül kötött ventilátorok RPM-je **elvileg nem
-olvasható**: a tacho a csatlakozó 3. vezetéke, ami ott nincs bekötve. Ezen a
-gépen alternatív út sincs — nincs digitális táp USB-n, és a `corsair_psu` /
-`aquacomputer_d5next` / `nzxt_smart2` driverek nem léteznek AlmaLinux 9-en.
-Egyetlen fan-input forrás van: `nct6798`, 7 csatorna.
+A bővítmény a `/sys/class/hwmon` könyvtárat vizsgálja meg, nem támaszkodik
+konkrét `hwmonX` sorszámra, alaplapra vagy hardvermonitor-chipre. A
+rendszerhőmérsékletet felirat alapján választja ki; többek között a `SYSTIN`,
+`System`, `Motherboard`, `Mainboard`, `Chassis`, `Case`, `Ambient` és `Board`
+megnevezéseket ismeri fel. Ha nincs ilyen szenzor, ez a menürész automatikusan
+rejtve marad, a lemezhőmérsékletek figyelése tovább működik.
 
-### Miért van a ház hőfoka a panelen
+A panelen a felismert rendszerhőfok az ikon után, a diszkek előtt van. Színe az
+`alert-systin` beállításhoz igazodik: három fokkal a riasztási küszöb alatt már
+sárga. A szenzor fizikai jelentése alaplaponként eltérhet, ezért az
+alapértelmezett 44 °C-os küszöböt az adott géphez érdemes igazítani; 0 °C-ra
+állítva a riasztás kikapcsolható.
 
-A `SYSTIN` nem melléklet, hanem a **vezető indikátor**, ezért `show-systin`
-alapból be van kapcsolva:
+A ventilátorokat a kiválasztott rendszerhőmérővel azonos `hwmon` eszközön
+deríti fel. A megjelenített nevet a kernel által közölt ventilátor- vagy
+forrásfeliratból képezi; ennek hiányában általános nevet használ. A
+ventilátorleállás-figyelés csak olyan csatornán aktiválódik, amelyen az adott
+munkamenetben már mért pozitív fordulatszámot. Így egy nem bekötött csatorna
+0 RPM értéke nem okoz téves riasztást, egy korábban forgó ventilátor leállása
+viszont igen.
 
-- ez vezérli a ventilátor-görbét (mind a három ház-venti `temp_sel=1`, knee 42 °C)
-- előbb emelkedik, mint a lemezek hőfoka, tehát előrejelzi a problémát
-- a tápra kötött ventilátorok RPM-je fizikailag nem olvasható, így egy leállásuk
-  **csak** a SYSTIN emelkedéséből derül ki
-
-A panelen az ikon után, a diszkek **előtt** van, fix helyen — a diszklista hossza
-a szűrés miatt változik, a ház-érték nem ugrálhat vízszintesen. A
-`panel-only-warm` szűrés nem érinti: hidegen is látszik.
-
-Színe nem a diszk-küszöbökhöz, hanem az `alert-systin`-hez igazodik (3 fokkal
-alatta már sárga). A `systinLevel()` egyetlen függvényben van, és a menüsor is
-azt hívja — különben a két kijelzés elcsúszhatna egymástól.
-
-### A ventilátorok figyelése
-
-Ezért a **következményt** figyeljük, nem az RPM-et:
-
-- `ház (SYSTIN)` — ház-ambient hőmérséklet
-- `fanN (…)` — csak azok a csatornák, amiket **már láttunk forogni**. Így az üres
-  headerek nem szemetelik a listát, egy szabad headerre átdugott ventilátor
-  magától megjelenik, és ha egy addig működő ventilátor leáll, **`ÁLL`** lesz
-  belőle 0 RPM-mel — ez a hibadetektor.
-
-Mért headerek (`nct6798`, ASRock Z490 Pro4), 100% PWM-es spin-up teszttel:
-
-| Header | Mi van rajta | Indulási küszöb | RPM 100%-on |
-|---|---|---|---|
-| fan2 | CPU ventilátor | – | 1687 |
-| fan4 | ház ventilátor | pwm 102 (40%) | 703 |
-| fan5 | ház ventilátor | pwm 102 (40%) | 1092 |
-| fan6 | ház ventilátor | pwm 90 (35%) | 1015 |
-| fan1, fan3, fan7 | üres | – | 0 |
-
-A `fan1`/`fan3`/`fan7` 100% PWM-en is 0 RPM, tehát nincs rajtuk semmi. A 0 RPM
-önmagában **nem** bizonyíték: egy bekötött ventilátor is 0-t mutat az indulási
-küszöbe alatt — ezért kell a spin-up teszt (`sudo`-val `pwmN_enable=1` +
-`pwmN=255` pár másodpercre, majd vissza `enable=5`-re).
-
-Riasztáskor (SYSTIN vagy HDD küszöb átlépve, vagy egy ismert ventilátor leállt)
-a hőmérő ikon pirosra vált, és a menüben megjelenik egy `⚠` sor az okkal. Ha a
-panel épp szűrve van és minden diszk hideg, a riasztás az `OK` helyére kerül ki —
-különben egy „OK" mögé rejtenénk el a problémát.
-
-Az `alert-systin` default 44 °C, mert a ventilátor-görbe 42 °C-on már 100%-on
-van: ha a ház ezt is átlépi, a hűtés tényleg nem elég. Terhelés alatt a 39-40 °C
-normális, azon riasztani hamis pozitív lenne.
+Riasztáskor a hőmérő ikon pirosra vált, és a menüben megjelenik egy `⚠` sor az
+okkal. Ha a panel épp szűrve van és minden diszk hideg, a riasztás az `OK`
+helyére kerül ki. A tachometrikus jel nélkül, például közvetlenül a tápegységről
+működő ventilátorok fordulatszáma szoftverből nem olvasható.
 
 ## Viselkedés
 
@@ -193,25 +167,32 @@ normális, azon riasztani hamis pozitív lenne.
   ikon.
 - A típuscímke (`HDD`/`SSD`/`NVMe`) a kijelzésre szolgál; a `kind` választja ki
   a hozzá tartozó, külön HDD/SATA SSD/NVMe küszöbpárt.
-- A menü sorrendje **mindig** hőfok szerint csökkenő, és **mindig mind a hét
-  diszket** tartalmazza, függetlenül a `panel-order`-től és a szűréstől.
+- A menü sorrendje **mindig** hőfok szerint csökkenő, és minden felismert
+  diszket tartalmaz, függetlenül a `panel-order`-től és a szűréstől.
 - `nowakeup: true` → standby lemez nem pörög fel; ilyenkor az utolsó ismert
   érték látszik `(standby)` jelöléssel.
-- Ha a `sudo` megtagadja az NVMe olvasást, a két NVMe `n/a`, a lábjegyzet jelzi,
-  a SATA diszkek változatlanul frissülnek.
-- Hotplug: udisks `InterfacesAdded`/`InterfacesRemoved` eventre a lista újraépül.
+- Ha az NVMe sem `hwmon`, sem `nvme-cli` segítségével nem olvasható, az adott
+  NVMe `n/a`, a lábjegyzet jelzi, a többi diszk változatlanul frissül.
+- Hotplug: az udisks eseményeire, valamint az NVMe- és `hwmon` eszközök
+  periodikus újrafelderítésekor a lista újraépül.
 - Alapértelmezett színküszöbök (`DEFAULT_THRESHOLDS` a `domain.js`-ben):
   HDD 45/50 °C, SATA SSD 55/65 °C, NVMe 60/70 °C.
 
 ## Fejlesztés
 
 Az `extension.js` a GNOME Shell-, D-Bus- és widget-életciklust kezeli. A
-megjelenítéstől független döntési logika a `domain.js` modulban van: átváltás,
-küszöbszintek, figyelmeztetés, eszköz- és hőfok szerinti rendezés, rövid címkék,
-valamint a beállított színek validálása.
+megjelenítéstől független döntési logika a `domain.js`, a hardverfelderítés
+segédfüggvényei pedig a `hardware.js` modulban vannak.
 
-A domain regressziós ellenőrzései a bővítmény gyökeréből futtathatók:
+A regressziós ellenőrzések a bővítmény gyökeréből futtathatók:
 
 ```bash
-gjs tests/domain.test.js
+make test
+```
+
+A telepíthető, minden szükséges modult, ikont és a lefordított sémát tartalmazó
+csomag elkészítése:
+
+```bash
+make pack
 ```
