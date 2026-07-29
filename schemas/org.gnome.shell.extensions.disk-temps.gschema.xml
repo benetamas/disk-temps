@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <enum id="org.gnome.shell.extensions.disk-temps.panel-position">
+    <value nick="left" value="0"/>
+    <value nick="center" value="1"/>
+    <value nick="right" value="2"/>
+  </enum>
+
+  <enum id="org.gnome.shell.extensions.disk-temps.panel-mode">
+    <value nick="all" value="0"/>
+    <value nick="hottest" value="1"/>
+  </enum>
+
+  <enum id="org.gnome.shell.extensions.disk-temps.panel-order">
+    <value nick="device" value="0"/>
+    <value nick="temperature" value="1"/>
+  </enum>
+
+  <schema id="org.gnome.shell.extensions.disk-temps"
+          path="/org/gnome/shell/extensions/disk-temps/">
+
+    <key name="panel-position" enum="org.gnome.shell.extensions.disk-temps.panel-position">
+      <default>'left'</default>
+      <summary>Panel oldal</summary>
+      <description>Melyik panel-boxba kerüljön az indikátor: left, center vagy right.</description>
+    </key>
+
+    <key name="panel-index" type="i">
+      <default>-1</default>
+      <range min="-1" max="20"/>
+      <summary>Pozíció a boxon belül</summary>
+      <description>Sorrend a választott panel-boxban. -1 = a box végére.</description>
+    </key>
+
+    <key name="panel-mode" enum="org.gnome.shell.extensions.disk-temps.panel-mode">
+      <default>'all'</default>
+      <summary>Panel tartalom</summary>
+      <description>all = minden diszk hőfoka a panelen, hottest = csak a legmelegebb.</description>
+    </key>
+
+    <key name="show-dev-label" type="b">
+      <default>true</default>
+      <summary>Dev címke a panelen</summary>
+      <description>Hőfok elé kiírja az eszköznevet (sda, nvme0).</description>
+    </key>
+
+    <key name="show-icon" type="b">
+      <default>true</default>
+      <summary>Hőmérő ikon</summary>
+      <description>Hőmérő ikon a panelen a hőfokok előtt. Színe a legmelegebb diszket követi.</description>
+    </key>
+
+    <key name="show-type" type="b">
+      <default>true</default>
+      <summary>Diszktípus kiírása</summary>
+      <description>HDD / SSD / NVMe címke a hőfok mellett.</description>
+    </key>
+
+    <key name="panel-only-warm" type="b">
+      <default>true</default>
+      <summary>Csak a sárga vagy melegebb diszkek</summary>
+      <description>A panelen csak azok a diszkek látszanak, amelyek elérték a saját sárga küszöbüket (HDD 45 °C, SATA SSD 55 °C, NVMe 60 °C), plusz amelyeknél az olvasás hibázott. A menüben mindig mind látszik.</description>
+    </key>
+
+    <key name="panel-order" enum="org.gnome.shell.extensions.disk-temps.panel-order">
+      <default>'device'</default>
+      <summary>Panel sorrend</summary>
+      <description>device = fix eszköznév sorrend (nem ugrálnak az értékek), temperature = legmelegebb elöl.</description>
+    </key>
+
+    <key name="threshold-hdd-warm" type="i">
+      <default>45</default>
+      <range min="0" max="100"/>
+      <summary>HDD sárga küszöb (°C)</summary>
+      <description>Merevlemez ettől számít melegnek. Korai figyelmeztetés az 50 °C-os normál tartományhatár előtt.</description>
+    </key>
+
+    <key name="threshold-hdd-hot" type="i">
+      <default>50</default>
+      <range min="0" max="100"/>
+      <summary>HDD piros küszöb (°C)</summary>
+      <description>Merevlemez ettől számít forrónak. A WD spec max 60 °C.</description>
+    </key>
+
+    <key name="threshold-ssd-warm" type="i">
+      <default>55</default>
+      <range min="0" max="100"/>
+      <summary>SATA SSD sárga küszöb (°C)</summary>
+      <description>SATA SSD ettől számít melegnek. Korai figyelmeztetés a 65 °C-os beavatkozási pont előtt.</description>
+    </key>
+
+    <key name="threshold-ssd-hot" type="i">
+      <default>65</default>
+      <range min="0" max="100"/>
+      <summary>SATA SSD piros küszöb (°C)</summary>
+      <description>SATA SSD ettől számít forrónak. Rendszeres 65 °C feletti működésnél javítani kell a hűtést.</description>
+    </key>
+
+    <key name="threshold-nvme-warm" type="i">
+      <default>60</default>
+      <range min="0" max="100"/>
+      <summary>NVMe sárga küszöb (°C)</summary>
+      <description>NVMe ettől számít melegnek. Korai figyelmeztetés a 70 °C-os gyártói üzemi határ előtt.</description>
+    </key>
+
+    <key name="threshold-nvme-hot" type="i">
+      <default>70</default>
+      <range min="0" max="100"/>
+      <summary>NVMe piros küszöb (°C)</summary>
+      <description>NVMe ettől számít forrónak. A vizsgált meghajtók gyártói üzemi felső határa és az NVMe ajánlott figyelmeztetési pontja 70 °C.</description>
+    </key>
+
+    <key name="color-cool" type="s">
+      <default>'#8ff0a4'</default>
+      <summary>Hideg szín</summary>
+      <description>#rrggbb vagy #rrggbbaa. Érvénytelen érték esetén a default érvényesül.</description>
+    </key>
+
+    <key name="color-warm" type="s">
+      <default>'#f8e45c'</default>
+      <summary>Meleg (sárga) szín</summary>
+      <description>#rrggbb vagy #rrggbbaa. Érvénytelen érték esetén a default érvényesül.</description>
+    </key>
+
+    <key name="color-hot" type="s">
+      <default>'#ff7b63'</default>
+      <summary>Forró (piros) szín</summary>
+      <description>#rrggbb vagy #rrggbbaa. Érvénytelen érték esetén a default érvényesül.</description>
+    </key>
+
+    <key name="color-na" type="s">
+      <default>'#8c8c94'</default>
+      <summary>Ismeretlen / hibás olvasás színe</summary>
+      <description>#rrggbb vagy #rrggbbaa. Érvénytelen érték esetén a default érvényesül.</description>
+    </key>
+
+    <key name="dark-menu" type="b">
+      <default>true</default>
+      <summary>Sötét lenyíló menü</summary>
+      <description>Saját sötét hátteret ad a menünek, a shell témától függetlenül. Világos témán (pl. Lavanda: fehér menüháttér) enélkül olvashatatlan a szöveg.</description>
+    </key>
+
+    <key name="show-systin" type="b">
+      <default>true</default>
+      <summary>Ház hőfok a panelen</summary>
+      <description>A SYSTIN (ház-ambient) hőfok a panelen, az ikon után, a diszkek előtt. Ez a vezető indikátor: ez vezérli a ventilátor-görbét, és előbb emelkedik, mint a lemezek hőfoka. A panel-only-warm szűrés nem érinti, akkor is látszik, ha hideg.</description>
+    </key>
+
+    <key name="show-sensors" type="b">
+      <default>true</default>
+      <summary>Ház-szenzorok a menüben</summary>
+      <description>SYSTIN (ház-ambient) és a mérhető ventilátorok RPM-je a menü alján.</description>
+    </key>
+
+    <key name="alert-systin" type="i">
+      <default>44</default>
+      <range min="0" max="90"/>
+      <summary>SYSTIN riasztási küszöb (°C)</summary>
+      <description>Ennyi fölött riaszt az ikon. 0 = kikapcsolva. A 44 azért ennyi, mert a ventilátor-görbe 42 °C-on már 100%-on van: ha a ház ezt is átlépi, akkor a hűtés tényleg nem elég. Terhelés alatt a 39-40 °C normális.</description>
+    </key>
+
+    <key name="alert-hdd" type="i">
+      <default>50</default>
+      <range min="0" max="90"/>
+      <summary>HDD riasztási küszöb (°C)</summary>
+      <description>Bármely merevlemez ennyi fölött riaszt. 0 = kikapcsolva.</description>
+    </key>
+
+    <key name="refresh-seconds" type="i">
+      <default>5</default>
+      <range min="1" max="300"/>
+      <summary>Frissítési időköz (s)</summary>
+      <description>Ennyi másodpercenként olvas SMART hőfokot.</description>
+    </key>
+  </schema>
+</schemalist>

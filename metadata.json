@@ -1,0 +1,11 @@
+{
+  "description": "Diszk hőmérsékletek a felső panelen (udisks2 + nvme-cli)",
+  "name": "Disk Temperatures",
+  "settings-schema": "org.gnome.shell.extensions.disk-temps",
+  "shell-version": [
+    "40"
+  ],
+  "url": "https://github.com/benetamas/disk-temps",
+  "uuid": "disk-temps@lycantrop.hu",
+  "version": 2
+}

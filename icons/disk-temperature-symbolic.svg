@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <!-- Hőmérő: szár + gömb + skálavonalak. Csak fill, stroke nélkül, hogy a GTK
+       symbolic recolor (fill: currentColor !important) mindent átszínezzen.
+       Egész pixelre igazított koordináták, hogy 16px-en ne mosódjon el. -->
+  <g>
+    <rect x="5" y="1.5" width="3.5" height="9" rx="1.75"/>
+    <circle cx="6.75" cy="11.5" r="3.2"/>
+    <rect x="10.3" y="3" width="2.7" height="1" rx="0.5"/>
+    <rect x="10.3" y="6" width="2.7" height="1" rx="0.5"/>
+    <rect x="10.3" y="9" width="2.7" height="1" rx="0.5"/>
+  </g>
+</svg>

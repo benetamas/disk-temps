@@ -1,0 +1,108 @@
+.disk-temp-panel {
+    padding: 0 4px;
+    spacing: 8px;
+}
+
+.disk-temp-panel-item {
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+/* A symbolic SVG a color-t veszi fel, így a hőfok-osztályok az ikont is színezik */
+.disk-temp-icon {
+    icon-size: 16px;
+}
+
+/* A négy szintszín itt csak TARTALÉK. A tényleges színt a kód inline
+ * `set_style('color: …')`-lal teszi rá a color-cool/warm/hot/na beállításokból,
+ * és az inline stílus felülírja a stíluslapot. Statikus CSS-ből nem megy, mert
+ * futásidőben állítható. Az értékek itt a defaultokkal egyeznek, hogy egy
+ * esetleges sikertelen beállítás-olvasásnál se legyen színtelen a kijelzés. */
+.disk-temp-cool {
+    color: #8ff0a4;
+}
+
+.disk-temp-warm {
+    color: #f8e45c;
+}
+
+.disk-temp-hot {
+    color: #ff7b63;
+    font-weight: bold;
+}
+
+.disk-temp-na {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* A színt KÖTELEZŐ megadni: e nélkül a téma szövegszínét örökölte
+ * (Lavanda: rgba(0,0,0,.6)), ami a sötét menün rgb(25,24,30) lett a
+ * rgb(38,36,46) háttéren -- 1.15-es kontraszt, olvashatatlan. Ez az
+ * elsődleges azonosító kolumna, ezért a legvilágosabb a háromból. */
+.disk-temp-dev {
+    min-width: 5.5em;
+    font-family: monospace;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.disk-temp-type {
+    min-width: 4.5em;
+    font-family: monospace;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.disk-temp-model {
+    min-width: 13em;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.disk-temp-value {
+    min-width: 7em;
+    text-align: right;
+    font-family: monospace;
+}
+
+/* --- Saját sötét dropdown ------------------------------------------------- *
+ * A shell téma szabja meg a menü hátterét. A Lavanda #FFFFFF hátteret és
+ * `color: rgba(0,0,0,.6) !important`-ot ad, amiben a világos labeljeink
+ * olvashatatlanok. Két class ugyanazon az elemen (.popup-menu.disk-temp-menu)
+ * nagyobb specificitást ad, mint a témában lévő `.popup-menu .popup-menu-content`,
+ * tehát nem a stíluslapok betöltési sorrendjén múlik, melyik győz.
+ *
+ * Szándékosan NINCS széles `StLabel { color }` szabály: az specifikusabb lenne
+ * a hőfok-osztályoknál, és fehérre festené a zöld/sárga/piros értékeket is. */
+
+.popup-menu.disk-temp-menu .popup-menu-content {
+    background-color: #26242e;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+}
+
+.popup-menu.disk-temp-menu .popup-separator-menu-item-separator {
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+.popup-menu.disk-temp-menu .popup-menu-item:hover,
+.popup-menu.disk-temp-menu .popup-menu-item:focus {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Azoknak a labeleknek, amiknek nincs saját class-uk (pl. „Beállítások…”) */
+.disk-temp-menu-text {
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.disk-temp-sensor-name {
+    min-width: 11em;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.disk-temp-alert {
+    color: #ff7b63;
+    font-weight: bold;
+}
+
+.disk-temp-footer {
+    font-size: 0.85em;
+    color: rgba(255, 255, 255, 0.6);
+}
