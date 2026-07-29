@@ -8,8 +8,11 @@ const Gio = imports.gi.Gio;
 const Gtk = imports.gi.Gtk;
 
 const ExtensionUtils = imports.misc.extensionUtils;
+const Me = ExtensionUtils.getCurrentExtension();
+const I18n = Me.imports.i18n;
 
 function init() {
+    ExtensionUtils.initTranslations(Me.metadata['gettext-domain']);
 }
 
 function addSection(grid, row, title) {
@@ -103,8 +106,8 @@ function spinFor(settings, key, min, max) {
     return spin;
 }
 
-function buildPrefsWidget() {
-    let settings = ExtensionUtils.getSettings();
+function buildPrefsPage(settings, language) {
+    let _ = I18n.createTranslator(language, `${Me.path}/locale`);
 
     let grid = new Gtk.Grid({
         column_spacing: 24,
@@ -119,115 +122,123 @@ function buildPrefsWidget() {
 
     let row = 0;
 
-    addRow(grid, row++, 'Panel oldal',
+    addRow(grid, row++, _('Language'),
+        comboFor(settings, 'language', [
+            ['en', 'English'],
+            ['de', 'Deutsch'],
+            ['hu', 'Magyar'],
+        ]),
+        _('Language used by this extension. Changes apply immediately.'));
+
+    addRow(grid, row++, _('Panel position'),
         comboFor(settings, 'panel-position', [
-            ['left', 'Bal'],
-            ['center', 'Közép'],
-            ['right', 'Jobb'],
+            ['left', _('Left')],
+            ['center', _('Center')],
+            ['right', _('Right')],
         ]),
-        'A GNOME panel melyik boxába kerüljön az indikátor.');
+        _('The section of the GNOME panel where the indicator is placed.'));
 
-    addRow(grid, row++, 'Pozíció a boxban',
+    addRow(grid, row++, _('Position in section'),
         spinFor(settings, 'panel-index', -1, 20),
-        '−1 = a box végére. Balra 0 = az Activities után az első hely.');
+        _('−1 places it at the end. In the left section, 0 is the first position after Activities.'));
 
-    addRow(grid, row++, 'Panel tartalom',
+    addRow(grid, row++, _('Panel content'),
         comboFor(settings, 'panel-mode', [
-            ['all', 'Minden diszk hőfoka'],
-            ['hottest', 'Csak a legmelegebb'],
+            ['all', _('All disk temperatures')],
+            ['hottest', _('Hottest only')],
         ]),
-        'A legördülő menüben mindig minden felismert diszk látszik.');
+        _('The drop-down menu always shows every detected disk.'));
 
     let iconSwitch = new Gtk.Switch({ active: settings.get_boolean('show-icon') });
     settings.bind('show-icon', iconSwitch, 'active', Gio.SettingsBindFlags.DEFAULT);
-    addRow(grid, row++, 'Hőmérő ikon', iconSwitch,
-        'Ikon a hőfokok előtt. Színe a legmelegebb diszket követi.');
+    addRow(grid, row++, _('Thermometer icon'), iconSwitch,
+        _('Show an icon before the temperatures. Its color follows the most severe disk state.'));
 
     let devSwitch = new Gtk.Switch({ active: settings.get_boolean('show-dev-label') });
     settings.bind('show-dev-label', devSwitch, 'active', Gio.SettingsBindFlags.DEFAULT);
-    addRow(grid, row++, 'Dev címke a panelen', devSwitch,
-        'Hőfok elé kiírja az eszköznevet: „sdb 54°” a puszta „54°” helyett.');
+    addRow(grid, row++, _('Device label in panel'), devSwitch,
+        _('Show the device name before its temperature: “sdb 54°” instead of just “54°”.'));
 
     let typeSwitch = new Gtk.Switch({ active: settings.get_boolean('show-type') });
     settings.bind('show-type', typeSwitch, 'active', Gio.SettingsBindFlags.DEFAULT);
-    addRow(grid, row++, 'Diszktípus kiírása', typeSwitch,
-        'HDD / SSD / NVMe címke a hőfok mellett: „sdb HDD 54°”.');
+    addRow(grid, row++, _('Show disk type'), typeSwitch,
+        _('Show an HDD, SSD, or NVMe label next to the temperature: “sdb HDD 54°”.'));
 
     let warmSwitch = new Gtk.Switch({ active: settings.get_boolean('panel-only-warm') });
     settings.bind('panel-only-warm', warmSwitch, 'active', Gio.SettingsBindFlags.DEFAULT);
-    addRow(grid, row++, 'Csak a sárga vagy melegebb', warmSwitch,
-        'A panelen csak a saját küszöbüket elért diszkek (HDD 45 °C, SATA SSD 55 °C, NVMe 60 °C) és a hibás olvasások. Ha mind hideg: „OK 32°”. A menüben mindig mind látszik.');
+    addRow(grid, row++, _('Only warm or hotter disks'), warmSwitch,
+        _('Show only disks at or above their warm threshold and disks with read errors. When all disks are cool, show “OK 32°”. The menu still shows every disk.'));
 
     let systinSwitch = new Gtk.Switch({ active: settings.get_boolean('show-systin') });
     settings.bind('show-systin', systinSwitch, 'active', Gio.SettingsBindFlags.DEFAULT);
-    addRow(grid, row++, 'Rendszerhőfok a panelen', systinSwitch,
-        'A felismert SYSTIN/System/Motherboard/Ambient hwmon szenzor az ikon után, saját nevével. A szűrés nem érinti, hidegen is látszik.');
+    addRow(grid, row++, _('System temperature in panel'), systinSwitch,
+        _('Show the detected SYSTIN, System, Motherboard, or Ambient hwmon sensor after the icon, using its own name. Disk filtering does not hide it.'));
 
-    addRow(grid, row++, 'Panel sorrend',
+    addRow(grid, row++, _('Panel order'),
         comboFor(settings, 'panel-order', [
-            ['device', 'Eszköznév (fix)'],
-            ['temperature', 'Legmelegebb elöl'],
+            ['device', _('Device name (fixed)')],
+            ['temperature', _('Hottest first')],
         ]),
-        'Fix sorrendnél nem ugrálnak az értékek egymás helyére.');
+        _('A fixed order prevents values from changing places.'));
 
-    addRow(grid, row++, 'Frissítés (másodperc)',
+    addRow(grid, row++, _('Refresh interval (seconds)'),
         spinFor(settings, 'refresh-seconds', 1, 300),
-        'SMART olvasás gyakorisága. Default 5.');
+        _('SMART reading interval. Default: 5.'));
 
     let darkSwitch = new Gtk.Switch({ active: settings.get_boolean('dark-menu') });
     settings.bind('dark-menu', darkSwitch, 'active', Gio.SettingsBindFlags.DEFAULT);
-    addRow(grid, row++, 'Sötét lenyíló menü', darkSwitch,
-        'Saját sötét háttér a menünek, a shell témától függetlenül. Kikapcsolva világos témán (Lavanda: fehér menü) a másodlagos szövegek nehezen olvashatók.');
+    addRow(grid, row++, _('Dark drop-down menu'), darkSwitch,
+        _('Use a dark menu background independently of the shell theme. Secondary text can be difficult to read with this disabled on light themes.'));
 
     let sensorSwitch = new Gtk.Switch({ active: settings.get_boolean('show-sensors') });
     settings.bind('show-sensors', sensorSwitch, 'active', Gio.SettingsBindFlags.DEFAULT);
-    addRow(grid, row++, 'Rendszerszenzorok a menüben', sensorSwitch,
-        'A felismert rendszerhőfok és az ugyanazon alaplapi hwmon eszköz mérhető ventilátorai. Ami egyszer forgott, azt onnantól figyeli.');
+    addRow(grid, row++, _('System sensors in menu'), sensorSwitch,
+        _('Show the detected system temperature and measurable fans from the same motherboard hwmon device. A fan is monitored after it has reported a positive speed.'));
 
-    addRow(grid, row++, 'Riasztás: rendszerhőfok (°C)',
+    addRow(grid, row++, _('Alert: system temperature (°C)'),
         spinFor(settings, 'alert-systin', 0, 90),
-        'Alapértelmezetten 44; 3 fokkal előtte sárga. A szenzor helye alaplapfüggő, ezért szükség esetén igazítsd a géphez. 0 = kikapcsolva.');
+        _('Default: 44. The indicator turns warm 3 °C earlier. Sensor placement depends on the motherboard, so adjust this value for the machine if necessary. 0 disables the alert.'));
 
-    addRow(grid, row++, 'Riasztás: HDD (°C)',
+    addRow(grid, row++, _('Alert: HDD (°C)'),
         spinFor(settings, 'alert-hdd', 0, 90),
-        'Bármely merevlemez küszöbe. Default 50. A tápra kötött ventilátorok RPM-je nem olvasható, ezért a következményt figyeljük. 0 = kikapcsolva.');
+        _('Alert threshold for any hard disk. Default: 50. 0 disables the alert.'));
 
-    addSection(grid, row++, 'Küszöbök');
+    addSection(grid, row++, _('Thresholds'));
 
-    addRow(grid, row++, 'HDD sárga (°C)',
+    addRow(grid, row++, _('HDD warm (°C)'),
         spinFor(settings, 'threshold-hdd-warm', 0, 100),
-        'Default 45. Korai figyelmeztetés az 50 °C-os normál tartományhatár előtt.');
+        _('Default: 45. Provides an early warning before the 50 °C normal-range boundary.'));
 
-    addRow(grid, row++, 'HDD piros (°C)',
+    addRow(grid, row++, _('HDD hot (°C)'),
         spinFor(settings, 'threshold-hdd-hot', 0, 100),
-        'Merevlemez ettől számít forrónak. Default 50, a WD spec max 60.');
+        _('A hard disk is hot from this temperature. Default: 50; many drives specify 60 °C as their maximum.'));
 
-    addRow(grid, row++, 'SATA SSD sárga (°C)',
+    addRow(grid, row++, _('SATA SSD warm (°C)'),
         spinFor(settings, 'threshold-ssd-warm', 0, 100),
-        'Default 55. A SATA SSD-k üzemi felső határa tipikusan 70 °C.');
+        _('Default: 55. SATA SSDs commonly specify 70 °C as their upper operating temperature.'));
 
-    addRow(grid, row++, 'SATA SSD piros (°C)',
+    addRow(grid, row++, _('SATA SSD hot (°C)'),
         spinFor(settings, 'threshold-ssd-hot', 0, 100),
-        'Default 65. Efölött tartósan már javítani kell a hűtést.');
+        _('Default: 65. Sustained operation above this point calls for better cooling.'));
 
-    addRow(grid, row++, 'NVMe sárga (°C)',
+    addRow(grid, row++, _('NVMe warm (°C)'),
         spinFor(settings, 'threshold-nvme-warm', 0, 100),
-        'Default 60. Korai figyelmeztetés a 70 °C-os üzemi határ előtt.');
+        _('Default: 60. Provides an early warning before the 70 °C operating limit.'));
 
-    addRow(grid, row++, 'NVMe piros (°C)',
+    addRow(grid, row++, _('NVMe hot (°C)'),
         spinFor(settings, 'threshold-nvme-hot', 0, 100),
-        'Default 70, a gyártói üzemi felső határ és az NVMe ajánlott figyelmeztetési pont.');
+        _('Default: 70. This is a common upper operating limit and NVMe warning point.'));
 
-    addSection(grid, row++, 'Színek');
+    addSection(grid, row++, _('Colors'));
 
-    addRow(grid, row++, 'Hideg', colorFor(settings, 'color-cool'),
-        'A küszöbök alatti hőfokok színe.');
-    addRow(grid, row++, 'Meleg', colorFor(settings, 'color-warm'),
-        'A sárga küszöb és a piros közötti sáv.');
-    addRow(grid, row++, 'Forró', colorFor(settings, 'color-hot'),
-        'A piros küszöb fölött. A riasztás sor és a riasztó ikon is ezt használja.');
-    addRow(grid, row++, 'Ismeretlen / hibás', colorFor(settings, 'color-na'),
-        'Ha az olvasás nem sikerült (n/a), vagy még nincs adat.');
+    addRow(grid, row++, _('Cool'), colorFor(settings, 'color-cool'),
+        _('Color used below the warm threshold.'));
+    addRow(grid, row++, _('Warm'), colorFor(settings, 'color-warm'),
+        _('Color used between the warm and hot thresholds.'));
+    addRow(grid, row++, _('Hot'), colorFor(settings, 'color-hot'),
+        _('Color used above the hot threshold. Alerts and the alert icon use it too.'));
+    addRow(grid, row++, _('Unknown / read error'), colorFor(settings, 'color-na'),
+        _('Color used when a reading failed (n/a) or no data is available yet.'));
 
     // A GNOME 40 prefs ablaka fix meretu es a widgetet nem gorgeti, csak
     // levagja -- 14 sorral mar nem latszott az alja. ScrolledWindow-ba tesszuk.
@@ -246,4 +257,22 @@ function buildPrefsWidget() {
     scrolled.set_child(grid);
 
     return scrolled;
+}
+
+function buildPrefsWidget() {
+    let settings = ExtensionUtils.getSettings();
+    let stack = new Gtk.Stack({
+        hexpand: true,
+        vexpand: true,
+    });
+
+    for (let language of ['en', 'de', 'hu'])
+        stack.add_named(buildPrefsPage(settings, language), language);
+
+    stack.set_visible_child_name(settings.get_string('language'));
+    settings.connect('changed::language', () => {
+        stack.set_visible_child_name(settings.get_string('language'));
+    });
+
+    return stack;
 }

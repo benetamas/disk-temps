@@ -16,7 +16,13 @@ const PopupMenu = imports.ui.popupMenu;
 const Me = ExtensionUtils.getCurrentExtension();
 const Domain = Me.imports.domain;
 const Hardware = Me.imports.hardware;
+const I18n = Me.imports.i18n;
 const ICON_FILE = `${Me.path}/icons/disk-temperature-symbolic.svg`;
+
+let translate = message => message;
+function _(message) {
+    return translate(message);
+}
 
 // Ennyi frissítési kör után újraenumeráljuk az udisks, NVMe és hwmon
 // eszközöket. Boot után egyes interfészek később jelenhetnek meg, és a
@@ -82,7 +88,9 @@ function bytestring(value) {
 let DiskTempsButton = GObject.registerClass(
 class DiskTempsButton extends PanelMenu.Button {
     _init(settings) {
-        super._init(0.0, 'Disk Temperatures', false);
+        translate = I18n.createTranslator(
+            settings.get_string('language'), `${Me.path}/locale`);
+        super._init(0.0, _('Disk Temperatures'), false);
 
         this._settings = settings;
         this._settingsIds = [];
@@ -153,14 +161,14 @@ class DiskTempsButton extends PanelMenu.Button {
 
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-        this._footer = new PopupMenu.PopupMenuItem('Frissítve: –', {
+        this._footer = new PopupMenu.PopupMenuItem(`${_('Updated:')} –`, {
             reactive: false,
             can_focus: false,
             style_class: 'disk-temp-footer',
         });
         this.menu.addMenuItem(this._footer);
 
-        this._prefsItem = new PopupMenu.PopupMenuItem('Beállítások…');
+        this._prefsItem = new PopupMenu.PopupMenuItem(_('Settings…'));
         this._prefsItem.connect('activate', () => ExtensionUtils.openPrefs());
         this.menu.addMenuItem(this._prefsItem);
         // Ennek a labeljenek nincs sajat style class-a, tehat a tema szinet
@@ -267,7 +275,7 @@ class DiskTempsButton extends PanelMenu.Button {
         if (!updateUi || oldKey === newKey)
             return;
 
-        log(`disk-temps: NVMe lista változott (${this._nvmeDrives.length} eszköz)`);
+        log(`disk-temps: NVMe device list changed (${this._nvmeDrives.length} devices)`);
         this._rebuildRows();
         this._syncPanel(true);
     }
@@ -343,7 +351,7 @@ class DiskTempsButton extends PanelMenu.Button {
                 return;
 
             if (error) {
-                logError(error, 'disk-temps: udisks2 ObjectManager nem elérhető');
+                logError(error, 'disk-temps: udisks2 ObjectManager is unavailable');
                 this._render();
                 return;
             }
@@ -470,7 +478,7 @@ class DiskTempsButton extends PanelMenu.Button {
             }
 
             if (this._ataKey !== null && this._ataKey !== undefined)
-                log(`disk-temps: diszklista valtozott (${ataDrives.length} ATA diszk)`);
+                log(`disk-temps: disk list changed (${ataDrives.length} ATA disks)`);
 
             this._ataKey = key;
             this._rebuildRows();
@@ -484,7 +492,7 @@ class DiskTempsButton extends PanelMenu.Button {
                 return;
 
             if (error) {
-                logError(error, `disk-temps: Drive.Ata proxy hiba (${drive.dev})`);
+                logError(error, `disk-temps: Drive.Ata proxy error (${drive.dev})`);
                 return;
             }
 
@@ -529,7 +537,7 @@ class DiskTempsButton extends PanelMenu.Button {
                         if (error.message && error.message.indexOf('WouldWakeup') >= 0) {
                             drive.standby = true;
                         } else if (!this._smartFailLogged) {
-                            logError(error, `disk-temps: SmartUpdate hiba (${drive.dev})`);
+                            logError(error, `disk-temps: SmartUpdate error (${drive.dev})`);
                             this._smartFailLogged = true;
                         }
                     } else {
@@ -567,9 +575,9 @@ class DiskTempsButton extends PanelMenu.Button {
         if (!this._nvmeExecutable) {
             entry.temp = null;
             entry.failed = true;
-            entry.failureReason = 'Az nvme-cli nem található';
+            entry.failureReason = _('nvme-cli was not found');
             if (!this._nvmeFailLogged) {
-                log('disk-temps: az nvme-cli nem található, és nincs NVMe hwmon hőfok');
+                log('disk-temps: nvme-cli was not found and no NVMe hwmon temperature is available');
                 this._nvmeFailLogged = true;
             }
             this._render();
@@ -595,7 +603,7 @@ class DiskTempsButton extends PanelMenu.Button {
                 entry.failed = true;
                 entry.failureReason = e.message || String(e);
                 if (!this._nvmeFailLogged) {
-                    logError(e, 'disk-temps: nvme smart-log olvasás sikertelen');
+                    logError(e, 'disk-temps: nvme smart-log read failed');
                     this._nvmeFailLogged = true;
                 }
             }
@@ -685,7 +693,7 @@ class DiskTempsButton extends PanelMenu.Button {
     _systemTemperatureName() {
         return this._systemMonitor
             ? this._systemMonitor.temperature.label
-            : 'rendszer';
+            : _('system');
     }
 
     // Riasztási források: rendszer-/ház-hőfok, HDD-hőfok és egy korábban már
@@ -707,7 +715,7 @@ class DiskTempsButton extends PanelMenu.Button {
 
         for (let fan of this._fans) {
             if (fan.rpm === 0)
-                list.push(`${fan.name} áll`);
+                list.push(`${fan.name} ${_('stopped')}`);
         }
 
         return list;
@@ -942,7 +950,7 @@ class DiskTempsButton extends PanelMenu.Button {
             if (drive.temp === null)
                 text = drive.failed ? 'n/a' : '–';
             else if (drive.standby)
-                text = `${drive.temp} °C (standby)`;
+                text = `${drive.temp} °C (${_('standby')})`;
             else
                 text = `${drive.temp} °C`;
 
@@ -952,9 +960,9 @@ class DiskTempsButton extends PanelMenu.Button {
         });
 
         let stamp = this._lastUpdate ? this._lastUpdate.toLocaleTimeString() : '–';
-        let footer = `Frissítve: ${stamp}`;
+        let footer = `${_('Updated:')} ${stamp}`;
         if (this._nvmeDrives.some(d => d.failed))
-            footer += ' · NVMe: olvasás sikertelen';
+            footer += ` · ${_('NVMe: read failed')}`;
 
         this._footer.label.set_text(footer);
     }
@@ -1016,7 +1024,7 @@ class DiskTempsButton extends PanelMenu.Button {
             if (!row)
                 continue;
 
-            let text = fan.rpm === 0 ? 'ÁLL' : `${fan.rpm} RPM`;
+            let text = fan.rpm === 0 ? _('STOPPED') : `${fan.rpm} RPM`;
             if (fan.duty !== null)
                 text += ` · ${fan.duty}%`;
 
@@ -1136,6 +1144,7 @@ function repositionIndicator() {
 }
 
 function init() {
+    ExtensionUtils.initTranslations(Me.metadata['gettext-domain']);
 }
 
 function enable() {
@@ -1143,6 +1152,7 @@ function enable() {
     positionIds = [
         settings.connect('changed::panel-position', () => repositionIndicator()),
         settings.connect('changed::panel-index', () => repositionIndicator()),
+        settings.connect('changed::language', () => repositionIndicator()),
     ];
     addToPanel();
 }

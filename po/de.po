@@ -1,0 +1,350 @@
+# German translations for Disk Temperatures.
+# Copyright (C) 2026
+# This file is distributed under the same license as the Disk Temperatures package.
+# Bene Tamás <bene.tamas.84@gmail.com>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Disk Temperatures 4\n"
+"Report-Msgid-Bugs-To: bene.tamas.84@gmail.com\n"
+"POT-Creation-Date: 2026-07-29 15:10+0200\n"
+"PO-Revision-Date: 2026-07-29 14:39+0200\n"
+"Last-Translator: Bene Tamás <bene.tamas.84@gmail.com>\n"
+"Language-Team: German\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: prefs.js:182 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:80
+msgid "A fixed order prevents values from changing places."
+msgstr ""
+"Eine feste Reihenfolge verhindert, dass die Werte ihre Plätze tauschen."
+
+#: prefs.js:214 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:94
+msgid ""
+"A hard disk is hot from this temperature. Default: 50; many drives specify "
+"60 °C as their maximum."
+msgstr ""
+"Eine Festplatte gilt ab dieser Temperatur als heiß. Standard: 50; viele "
+"Laufwerke geben 60 °C als Maximum an."
+
+#: prefs.js:204 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:178
+msgid "Alert threshold for any hard disk. Default: 50. 0 disables the alert."
+msgstr ""
+"Alarmschwelle für jede Festplatte. Standard: 50. 0 deaktiviert den Alarm."
+
+#: prefs.js:202 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:177
+msgid "Alert: HDD (°C)"
+msgstr "Alarm: HDD (°C)"
+
+#: prefs.js:198 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:170
+msgid "Alert: system temperature (°C)"
+msgstr "Alarm: Systemtemperatur (°C)"
+
+#: prefs.js:147
+msgid "All disk temperatures"
+msgstr "Alle Laufwerkstemperaturen"
+
+#: prefs.js:136
+msgid "Center"
+msgstr "Mitte"
+
+#: prefs.js:239 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:140
+msgid ""
+"Color used above the hot threshold. Alerts and the alert icon use it too."
+msgstr ""
+"Farbe oberhalb der Heiß-Schwelle. Alarme und das Alarmsymbol verwenden sie "
+"ebenfalls."
+
+#: prefs.js:235 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:128
+msgid "Color used below the warm threshold."
+msgstr "Farbe unterhalb der Warm-Schwelle."
+
+#: prefs.js:237 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:134
+msgid "Color used between the warm and hot thresholds."
+msgstr "Farbe zwischen der Warm- und Heiß-Schwelle."
+
+#: prefs.js:241 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:146
+msgid "Color used when a reading failed (n/a) or no data is available yet."
+msgstr ""
+"Farbe bei fehlgeschlagener Messung (n/a) oder wenn noch keine Daten "
+"vorliegen."
+
+#: prefs.js:232
+msgid "Colors"
+msgstr "Farben"
+
+#: prefs.js:234 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:127
+msgid "Cool"
+msgstr "Kühl"
+
+#: prefs.js:190 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:151
+msgid "Dark drop-down menu"
+msgstr "Dunkles Aufklappmenü"
+
+#: prefs.js:200 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:171
+msgid ""
+"Default: 44. The indicator turns warm 3 °C earlier. Sensor placement depends "
+"on the motherboard, so adjust this value for the machine if necessary. 0 "
+"disables the alert."
+msgstr ""
+"Standard: 44. Die Anzeige wird 3 °C früher warm. Die Sensorposition hängt "
+"vom Mainboard ab; passen Sie den Wert bei Bedarf an. 0 deaktiviert den Alarm."
+
+#: prefs.js:210 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:87
+msgid ""
+"Default: 45. Provides an early warning before the 50 °C normal-range "
+"boundary."
+msgstr ""
+"Standard: 45. Warnt frühzeitig vor der Grenze des Normalbereichs bei 50 °C."
+
+#: prefs.js:218 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:101
+msgid ""
+"Default: 55. SATA SSDs commonly specify 70 °C as their upper operating "
+"temperature."
+msgstr ""
+"Standard: 55. SATA-SSDs geben häufig 70 °C als obere Betriebstemperatur an."
+
+#: prefs.js:226 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:115
+msgid ""
+"Default: 60. Provides an early warning before the 70 °C operating limit."
+msgstr "Standard: 60. Warnt frühzeitig vor der Betriebsgrenze bei 70 °C."
+
+#: prefs.js:222 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:108
+msgid ""
+"Default: 65. Sustained operation above this point calls for better cooling."
+msgstr ""
+"Standard: 65. Dauerbetrieb oberhalb dieses Werts erfordert eine bessere "
+"Kühlung."
+
+#: prefs.js:230 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:122
+msgid ""
+"Default: 70. This is a common upper operating limit and NVMe warning point."
+msgstr ""
+"Standard: 70. Dies ist eine übliche obere Betriebsgrenze und ein NVMe-"
+"Warnpunkt."
+
+#: prefs.js:159 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:55
+msgid "Device label in panel"
+msgstr "Gerätename im Panel"
+
+#: prefs.js:179
+msgid "Device name (fixed)"
+msgstr "Gerätename (fest)"
+
+#: extension.js:93
+msgid "Disk Temperatures"
+msgstr "Laufwerkstemperaturen"
+
+#: prefs.js:212 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:93
+msgid "HDD hot (°C)"
+msgstr "HDD heiß (°C)"
+
+#: prefs.js:208 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:86
+msgid "HDD warm (°C)"
+msgstr "HDD warm (°C)"
+
+#: prefs.js:238 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:139
+msgid "Hot"
+msgstr "Heiß"
+
+#: prefs.js:180
+msgid "Hottest first"
+msgstr "Heißestes zuerst"
+
+#: prefs.js:148
+msgid "Hottest only"
+msgstr "Nur das heißeste"
+
+#: prefs.js:125 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:30
+msgid "Language"
+msgstr "Sprache"
+
+#: prefs.js:131 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:31
+msgid "Language used by this extension. Changes apply immediately."
+msgstr "Von dieser Erweiterung verwendete Sprache. Änderungen werden sofort angewendet."
+
+#: prefs.js:135
+msgid "Left"
+msgstr "Links"
+
+#: prefs.js:228 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:121
+msgid "NVMe hot (°C)"
+msgstr "NVMe heiß (°C)"
+
+#: prefs.js:224 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:114
+msgid "NVMe warm (°C)"
+msgstr "NVMe warm (°C)"
+
+#: extension.js:965
+msgid "NVMe: read failed"
+msgstr "NVMe: Lesen fehlgeschlagen"
+
+#: prefs.js:169 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:73
+msgid "Only warm or hotter disks"
+msgstr "Nur warme oder heißere Laufwerke"
+
+#: prefs.js:145 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:49
+msgid "Panel content"
+msgstr "Panelinhalt"
+
+#: prefs.js:177 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:79
+msgid "Panel order"
+msgstr "Panelreihenfolge"
+
+#: prefs.js:133 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:36
+msgid "Panel position"
+msgstr "Panelposition"
+
+#: prefs.js:141 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:43
+msgid "Position in section"
+msgstr "Position im Bereich"
+
+#: prefs.js:184 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:184
+msgid "Refresh interval (seconds)"
+msgstr "Aktualisierungsintervall (Sekunden)"
+
+#: prefs.js:137
+msgid "Right"
+msgstr "Rechts"
+
+#: prefs.js:220 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:107
+msgid "SATA SSD hot (°C)"
+msgstr "SATA-SSD heiß (°C)"
+
+#: prefs.js:216 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:100
+msgid "SATA SSD warm (°C)"
+msgstr "SATA-SSD warm (°C)"
+
+#: prefs.js:186 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:185
+msgid "SMART reading interval. Default: 5."
+msgstr "Intervall der SMART-Messung. Standard: 5."
+
+#: extension.js:1027
+msgid "STOPPED"
+msgstr "GESTOPPT"
+
+#: extension.js:171
+msgid "Settings…"
+msgstr "Einstellungen…"
+
+#: prefs.js:165 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:68
+msgid "Show an HDD, SSD, or NVMe label next to the temperature: “sdb HDD 54°”."
+msgstr ""
+"HDD-, SSD- oder NVMe-Kennung neben der Temperatur anzeigen: „sdb HDD 54°“."
+
+#: prefs.js:155 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:62
+msgid ""
+"Show an icon before the temperatures. Its color follows the most severe disk "
+"state."
+msgstr ""
+"Ein Symbol vor den Temperaturen anzeigen. Seine Farbe folgt dem kritischsten "
+"Laufwerkszustand."
+
+#: prefs.js:164 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:67
+msgid "Show disk type"
+msgstr "Laufwerkstyp anzeigen"
+
+#: prefs.js:170 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:74
+msgid ""
+"Show only disks at or above their warm threshold and disks with read errors. "
+"When all disks are cool, show “OK 32°”. The menu still shows every disk."
+msgstr ""
+"Nur Laufwerke ab ihrer Warm-Schwelle sowie Laufwerke mit Lesefehlern "
+"anzeigen. Sind alle kühl, wird „OK 32°“ angezeigt. Das Menü zeigt weiterhin "
+"jedes Laufwerk."
+
+#: prefs.js:175 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:158
+msgid ""
+"Show the detected SYSTIN, System, Motherboard, or Ambient hwmon sensor after "
+"the icon, using its own name. Disk filtering does not hide it."
+msgstr ""
+"Den erkannten hwmon-Sensor SYSTIN, System, Motherboard oder Ambient nach dem "
+"Symbol unter seinem eigenen Namen anzeigen. Die Laufwerksfilterung blendet "
+"ihn nicht aus."
+
+#: prefs.js:196 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:164
+msgid ""
+"Show the detected system temperature and measurable fans from the same "
+"motherboard hwmon device. A fan is monitored after it has reported a "
+"positive speed."
+msgstr ""
+"Die erkannte Systemtemperatur und messbare Lüfter desselben Mainboard-hwmon-"
+"Geräts anzeigen. Ein Lüfter wird überwacht, nachdem er eine positive "
+"Drehzahl gemeldet hat."
+
+#: prefs.js:160 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:56
+msgid ""
+"Show the device name before its temperature: “sdb 54°” instead of just “54°”."
+msgstr ""
+"Den Gerätenamen vor der Temperatur anzeigen: „sdb 54°“ statt nur „54°“."
+
+#: prefs.js:195 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:163
+msgid "System sensors in menu"
+msgstr "Systemsensoren im Menü"
+
+#: prefs.js:174 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:157
+msgid "System temperature in panel"
+msgstr "Systemtemperatur im Panel"
+
+#: prefs.js:150 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:50
+msgid "The drop-down menu always shows every detected disk."
+msgstr "Das Aufklappmenü zeigt immer alle erkannten Laufwerke."
+
+#: prefs.js:139 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:37
+msgid "The section of the GNOME panel where the indicator is placed."
+msgstr "Der Bereich des GNOME-Panels, in dem die Anzeige platziert wird."
+
+#: prefs.js:154 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:61
+msgid "Thermometer icon"
+msgstr "Thermometersymbol"
+
+#: prefs.js:206
+msgid "Thresholds"
+msgstr "Schwellenwerte"
+
+#: prefs.js:240 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:145
+msgid "Unknown / read error"
+msgstr "Unbekannt / Lesefehler"
+
+#: extension.js:164 extension.js:963
+msgid "Updated:"
+msgstr "Aktualisiert:"
+
+#: prefs.js:191 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:152
+msgid ""
+"Use a dark menu background independently of the shell theme. Secondary text "
+"can be difficult to read with this disabled on light themes."
+msgstr ""
+"Unabhängig vom Shell-Thema einen dunklen Menühintergrund verwenden. Bei "
+"hellen Themen kann sekundärer Text sonst schwer lesbar sein."
+
+#: prefs.js:236 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:133
+msgid "Warm"
+msgstr "Warm"
+
+#: extension.js:578
+msgid "nvme-cli was not found"
+msgstr "nvme-cli wurde nicht gefunden"
+
+#: extension.js:953
+msgid "standby"
+msgstr "Standby"
+
+#: extension.js:718
+msgid "stopped"
+msgstr "gestoppt"
+
+#: extension.js:696
+msgid "system"
+msgstr "System"
+
+#: prefs.js:143 schemas/org.gnome.shell.extensions.disk-temps.gschema.xml:44
+msgid ""
+"−1 places it at the end. In the left section, 0 is the first position after "
+"Activities."
+msgstr ""
+"−1 platziert die Anzeige am Ende. Im linken Bereich ist 0 die erste Position "
+"nach „Aktivitäten“."

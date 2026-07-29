@@ -1,197 +1,187 @@
 # Disk Temperatures
 
-GNOME Shell 40 extension. Alapértelmezésben a panel **bal** oldalán minden
-felismert diszk hőfoka megjelenik eszközcímkével (`sdb 54° nvme0 50° …`), a
-legördülő menüben modellnévvel és hőfok szerint rendezve.
+A GNOME Shell 40 extension that monitors HDD, SATA SSD, and NVMe temperatures
+from one panel indicator. The drop-down menu lists every detected disk by
+temperature, while the panel can show all disks, only the hottest disk, or
+only disks that need attention.
 
-## Adatforrások és automatikus felderítés
+## Data sources and automatic discovery
 
-| Eszköz | Forrás | Privilégium |
+| Device | Source | Privileges |
 |---|---|---|
-| ATA HDD és SATA SSD | udisks2 D-Bus: `Drive.Ata.SmartUpdate()` + `SmartTemperature` | nincs |
-| NVMe SSD | Kernel `hwmon`, ennek hiányában a felderített `nvme-cli` | általában nincs; jogosultsági hiba esetén opcionális `sudo -n` |
-| Rendszerhőmérő és ventilátorok | A `/sys/class/hwmon` felismert szenzorai | nincs |
+| ATA HDD and SATA SSD | UDisks2 D-Bus: `Drive.Ata.SmartUpdate()` and `SmartTemperature` | None under the usual active-session policy |
+| NVMe SSD | Kernel `hwmon`, falling back to the detected `nvme-cli` | Usually none; optional `sudo -n` fallback on restricted systems |
+| System temperature and fans | Detected sensors under `/sys/class/hwmon` | None |
 
-A SATA-nál nem az udisks ~10 perces SMART cache-ét olvassuk: minden körben
-`SmartUpdate()` fut, amit a polkit `org.freedesktop.udisks2.ata-smart-update`
-akció `allow_active: yes` beállítása jelszó nélkül engedélyez.
+The extension discovers NVMe controllers under `/sys/class/nvme`, so device
+names and counts are not hard-coded. It first uses the kernel NVMe `hwmon`
+temperature. If that is unavailable, it locates `nvme` through `PATH` and
+common system directories, runs it directly, and only then tries `sudo -n`.
+The extension never displays a password prompt.
 
-Az NVMe-vezérlőket a bővítmény a `/sys/class/nvme` alatt deríti fel, ezért nincs
-beégetett eszköznév vagy darabszám. Elsőként a kernel által biztosított NVMe
-`hwmon` hőmérsékletet használja. Ennek hiányában az `nvme` programot a `PATH`,
-majd a szokásos rendszerkönyvtárak alapján keresi meg és közvetlenül futtatja.
-Csak sikertelen közvetlen olvasás után próbálkozik `sudo -n` tartalék úttal. A
-bővítmény soha nem kér jelszót; ha az adott rendszer jogosultságai miatt
-NOPASSWD szabály kell, annak a `command -v nvme` által jelzett tényleges
-programútvonalra kell vonatkoznia.
+If the machine requires a NOPASSWD rule for NVMe access, configure it for the
+actual executable reported by:
 
-## Beállítások
+```bash
+command -v nvme
+```
 
-`gnome-extensions prefs disk-temps@lycantrop.hu`, vagy a menü alján
-„Beállítások…”. Minden azonnal érvényesül, shell reload nélkül.
+ATA SMART updates use the `nowakeup` option, so a sleeping disk is not spun up
+only to refresh the indicator. Authorization for explicit SMART updates is
+controlled by the distribution's UDisks2/Polkit policy.
 
-| Kulcs | Default | Mit csinál |
+## Preferences
+
+Open the preferences from the menu or run:
+
+```bash
+gnome-extensions prefs disk-temps@lycantrop.hu
+```
+
+Changes take effect immediately.
+
+| Key | Default | Description |
 |---|---|---|
-| `panel-position` | `left` | `left` / `center` / `right` panel-box |
-| `panel-index` | `-1` | Sorrend a boxon belül, `-1` = a box végére |
-| `panel-mode` | `all` | `all` = minden diszk a panelen, `hottest` = csak a legmelegebb |
-| `show-icon` | `true` | Hőmérő ikon a hőfokok előtt |
-| `show-dev-label` | `true` | `sdb 54°` vs. puszta `54°` |
-| `show-type` | `true` | `HDD` / `SSD` / `NVMe` címke: `sdb HDD 54°` |
-| `panel-only-warm` | `true` | Panelen csak a sárga küszöböt elértek + hibás olvasások |
-| `panel-order` | `device` | `device` = fix eszköznév sorrend, `temperature` = legmelegebb elöl |
-| `refresh-seconds` | `5` | SMART olvasás gyakorisága (1–300) |
-| `threshold-hdd-warm` | `45` | HDD sárga küszöb °C |
-| `threshold-hdd-hot` | `50` | HDD piros küszöb °C |
-| `threshold-ssd-warm` | `55` | SATA SSD sárga küszöb °C |
-| `threshold-ssd-hot` | `65` | SATA SSD piros küszöb °C |
-| `threshold-nvme-warm` | `60` | NVMe sárga küszöb °C |
-| `threshold-nvme-hot` | `70` | NVMe piros küszöb °C |
-| `color-cool` | `#8ff0a4` | Hideg szín |
-| `color-warm` | `#f8e45c` | Meleg szín |
-| `color-hot` | `#ff7b63` | Forró szín (riasztás és ikon is) |
-| `color-na` | `#8c8c94` | Ismeretlen / hibás olvasás |
-| `dark-menu` | `true` | Saját sötét háttér a lenyíló menünek |
-| `show-systin` | `true` | Felismert rendszerhőfok a panelen, az ikon után |
-| `show-sensors` | `true` | Felismert rendszerhőfok + mérhető ventilátor-RPM a menü alján |
-| `alert-systin` | `44` | Rendszer-/alaplapszenzor riasztási küszöbe °C-ban, `0` = ki |
-| `alert-hdd` | `50` | HDD riasztási küszöb °C-ban, `0` = ki |
+| `language` | `en` | Extension language: `en`, `de`, or `hu` |
+| `panel-position` | `left` | GNOME panel section: `left`, `center`, or `right` |
+| `panel-index` | `-1` | Position in the selected section; `-1` means the end |
+| `panel-mode` | `all` | `all` shows selected disks; `hottest` shows one value |
+| `show-icon` | `true` | Show the thermometer icon |
+| `show-dev-label` | `true` | Show device names such as `sdb` or `nvme0` |
+| `show-type` | `true` | Show HDD, SSD, or NVMe next to the temperature |
+| `panel-only-warm` | `true` | Show only warm/hot disks and read failures |
+| `panel-order` | `device` | Fixed device order or hottest first |
+| `refresh-seconds` | `5` | Temperature refresh interval |
+| `threshold-hdd-warm` | `45` | HDD warm threshold in °C |
+| `threshold-hdd-hot` | `50` | HDD hot threshold in °C |
+| `threshold-ssd-warm` | `55` | SATA SSD warm threshold in °C |
+| `threshold-ssd-hot` | `65` | SATA SSD hot threshold in °C |
+| `threshold-nvme-warm` | `60` | NVMe warm threshold in °C |
+| `threshold-nvme-hot` | `70` | NVMe hot threshold in °C |
+| `color-cool` | `#8ff0a4` | Cool color |
+| `color-warm` | `#f8e45c` | Warm color |
+| `color-hot` | `#ff7b63` | Hot and alert color |
+| `color-na` | `#8c8c94` | Unknown/read-error color |
+| `dark-menu` | `true` | Use an extension-provided dark menu background |
+| `show-systin` | `true` | Show the detected system temperature in the panel |
+| `show-sensors` | `true` | Show system temperature and measurable fans in the menu |
+| `alert-systin` | `44` | System-temperature alert; `0` disables it |
+| `alert-hdd` | `50` | HDD alert; `0` disables it |
 
-CLI-ből is állítható:
+Settings can also be changed from the command line:
 
 ```bash
 SCHEMADIR=~/.local/share/gnome-shell/extensions/disk-temps@lycantrop.hu/schemas
-gsettings --schemadir $SCHEMADIR set org.gnome.shell.extensions.disk-temps panel-position right
-gsettings --schemadir $SCHEMADIR set org.gnome.shell.extensions.disk-temps panel-mode hottest
+gsettings --schemadir "$SCHEMADIR" set org.gnome.shell.extensions.disk-temps language de
+gsettings --schemadir "$SCHEMADIR" set org.gnome.shell.extensions.disk-temps panel-position right
+gsettings --schemadir "$SCHEMADIR" set org.gnome.shell.extensions.disk-temps panel-mode hottest
 ```
 
-Schema módosítás után újra kell fordítani:
+Compile the schema after changing its XML source:
 
 ```bash
 glib-compile-schemas ~/.local/share/gnome-shell/extensions/disk-temps@lycantrop.hu/schemas/
 ```
 
-## Ikon
+## Languages
 
-`icons/disk-temperature-symbolic.svg` — saját rajz, ezért nem függ egy adott
-ikontéma hőmérőikon-készletétől. A `-symbolic` névvég miatt a Shell
-recolorozza, így a `color` CSS-t követi: az ikon együtt vált sárgára/pirosra a
-legmelegebb diszkkel. Csak `fill`-t használ, `stroke`-ot nem (a GTK symbolic
-recolor csak a fillt írja át).
+The extension has its own language selector at the top of its Preferences
+window. It does not change the GNOME desktop language.
 
-**Csapda — ne tegyél negatív margint a stylesheet.css-be.** Egy `margin-right: -2px`
-a `.disk-temp-icon`-on negatív szélességet okoz (`Actor 'StBoxLayout' tried to
-allocate a size of -24.00 x 28.00`), amitől minden festésnél
-`cogl_framebuffer_set_viewport: assertion 'width > 0 && height > 0' failed` jön,
-és **az egész felső panel eltűnik** (nem csak ez az indikátor). Térköz csak
-pozitív `spacing`/`padding` értékkel.
+Supported languages:
 
-## Küszöbök és színek
+- English — default and fallback
+- German — `Deutsch`
+- Hungarian — `Magyar`
 
-Hat küszöb és négy szín állítható a prefs dialógusban (`Küszöbök` / `Színek`
-szekció) vagy `gsettings`-ből. Minden azonnal érvényesül, reload nélkül.
+The panel, menu, alerts, preferences, and GSettings descriptions use the
+selected language. Translation catalogs can be compiled with:
 
-A típusonkénti küszöb szándékos: egy 45 °C-os merevlemez aggasztó, egy 45 °C-os
-NVMe teljesen normális. A SATA SSD és az NVMe külön küszöbpárt kap: az NVMe
-gyártói üzemi felső határa és szabványos figyelmeztetési pontja magasabb.
+```bash
+make translations
+```
 
-A színek **nem** a stíluslapból jönnek: futásidőben állíthatók, ezért a kód
-inline `set_style('color: …')`-lal teszi rá őket, ami felülírja a CSS-t. A
-`stylesheet.css`-ben lévő négy szín csak tartalék, ha a beállítás olvasása
-elbukna.
+Run `make pot` after adding or changing translatable source strings, then
+update `po/de.po` and `po/hu.po`.
 
-A GSettings-ből jövő szín inline stílusba kerül, ezért `sanitizeColor()`
-ellenőrzi (`^#rrggbb$` vagy `^#rrggbbaa$`), és érvénytelen értéknél a defaultra
-esik vissza — egy elgépelt vagy szándékosan rossz érték különben elrontaná a
-stílust. Például `red`, `rgba(0,0,0,0)` és `#fff; background: red` mind
-elutasított.
+## Icon
 
-Küszöbváltásnál nem elég újraszínezni: megváltozik, hogy melyik diszk esik a
-panel szűrésébe, ezért a panel szerkezete is újraépül.
+`icons/disk-temperature-symbolic.svg` is bundled with the extension, avoiding
+a dependency on a particular icon theme. As a symbolic icon, it follows the
+configured state color.
 
-## Sötét menü és a téma
+Do not use negative margins on `.disk-temp-icon`. On GNOME Shell 40 this can
+produce a negative actor allocation and make the entire top panel disappear.
+Use positive spacing or padding instead.
 
-A menü hátterét a shell téma adja. A `Lavanda` például `#FFFFFF` hátteret és
-`color: rgba(0,0,0,.6) !important`-ot állít — abban a másodlagos, világos
-labeljeink (modellnév, típus, szenzornevek) fehéren fehérek voltak.
+## Thresholds and colors
 
-Ezért a `dark-menu` a menü actorára tesz egy `disk-temp-menu` class-t, és a
-stíluslap **saját sötét hátteret** ad neki, témafüggetlenül. A szelektor
-`.popup-menu.disk-temp-menu .popup-menu-content` — két class ugyanazon az
-elemen, tehát specifikusabb a téma `.popup-menu .popup-menu-content`-jénél, így
-nem a stíluslapok betöltési sorrendjén múlik, melyik győz.
+HDD, SATA SSD, and NVMe devices have separate warm/hot threshold pairs.
+Different storage technologies have different normal operating ranges, so a
+single threshold would produce misleading warnings.
 
-Szándékosan **nincs** széles `StLabel { color }` szabály: az specifikusabb lenne
-a hőfok-osztályoknál (`.disk-temp-hot` stb.), és fehérre festené a zöld/sárga/
-piros értékeket is. Amelyik labelnek nincs saját class-a (a „Beállítások…"
-sora), az kódból kap `disk-temp-menu-text`-et.
+Colors are stored in GSettings and applied as runtime styles. Values must use
+`#rrggbb` or `#rrggbbaa`; invalid values fall back to the built-in defaults.
+Changing a threshold immediately rebuilds the filtered panel contents.
 
-`dark-menu = false` esetén a téma színei érvényesülnek — világos témán a
-másodlagos szövegek és a zöld/sárga hőfokok nehezen olvashatók lesznek.
+## Dark menu
 
-## Rendszerszenzorok és ventilátorriasztás
+Shell themes control popup-menu colors. Some light themes make secondary text
+and colored values difficult to read, so `dark-menu` adds a theme-independent
+dark background. Disable it to use the Shell theme without overrides.
 
-A bővítmény a `/sys/class/hwmon` könyvtárat vizsgálja meg, nem támaszkodik
-konkrét `hwmonX` sorszámra, alaplapra vagy hardvermonitor-chipre. A
-rendszerhőmérsékletet felirat alapján választja ki; többek között a `SYSTIN`,
-`System`, `Motherboard`, `Mainboard`, `Chassis`, `Case`, `Ambient` és `Board`
-megnevezéseket ismeri fel. Ha nincs ilyen szenzor, ez a menürész automatikusan
-rejtve marad, a lemezhőmérsékletek figyelése tovább működik.
+## System sensors and fan alerts
 
-A panelen a felismert rendszerhőfok az ikon után, a diszkek előtt van. Színe az
-`alert-systin` beállításhoz igazodik: három fokkal a riasztási küszöb alatt már
-sárga. A szenzor fizikai jelentése alaplaponként eltérhet, ezért az
-alapértelmezett 44 °C-os küszöböt az adott géphez érdemes igazítani; 0 °C-ra
-állítva a riasztás kikapcsolható.
+The extension scans `/sys/class/hwmon` instead of relying on a specific
+`hwmonX` index, motherboard, or monitoring chip. It identifies a system or
+case temperature through labels such as:
 
-A ventilátorokat a kiválasztott rendszerhőmérővel azonos `hwmon` eszközön
-deríti fel. A megjelenített nevet a kernel által közölt ventilátor- vagy
-forrásfeliratból képezi; ennek hiányában általános nevet használ. A
-ventilátorleállás-figyelés csak olyan csatornán aktiválódik, amelyen az adott
-munkamenetben már mért pozitív fordulatszámot. Így egy nem bekötött csatorna
-0 RPM értéke nem okoz téves riasztást, egy korábban forgó ventilátor leállása
-viszont igen.
+- `SYSTIN`
+- `System`
+- `Motherboard` or `Mainboard`
+- `Chassis` or `Case`
+- `Ambient`
+- `Board`
 
-Riasztáskor a hőmérő ikon pirosra vált, és a menüben megjelenik egy `⚠` sor az
-okkal. Ha a panel épp szűrve van és minden diszk hideg, a riasztás az `OK`
-helyére kerül ki. A tachometrikus jel nélkül, például közvetlenül a tápegységről
-működő ventilátorok fordulatszáma szoftverből nem olvasható.
+If no suitable sensor is found, the system-sensor section stays hidden while
+disk monitoring continues normally.
 
-## Viselkedés
+Fans are discovered on the same `hwmon` device as the selected system sensor.
+A fan becomes monitored after reporting a positive speed once. This avoids
+false alerts from unused headers while still detecting when a previously
+running fan drops to 0 RPM. Fans without a tachometer signal cannot be
+monitored in software.
 
-- `panel-only-warm = true` esetén a panelre az kerül ki, aminek a hőfoka elérte a
-  saját sárga küszöbét (HDD 45 °C, SATA SSD 55 °C, NVMe 60 °C), **plusz**
-  amelyiknél az olvasás hibázott (`n/a`) — egy nem olvasható diszk figyelmet
-  érdemel, nem elrejtést.
-  Ha minden diszk hideg, a panel `OK <legmelegebb>°`-ot mutat, nem marad puszta
-  ikon.
-- A típuscímke (`HDD`/`SSD`/`NVMe`) a kijelzésre szolgál; a `kind` választja ki
-  a hozzá tartozó, külön HDD/SATA SSD/NVMe küszöbpárt.
-- A menü sorrendje **mindig** hőfok szerint csökkenő, és minden felismert
-  diszket tartalmaz, függetlenül a `panel-order`-től és a szűréstől.
-- `nowakeup: true` → standby lemez nem pörög fel; ilyenkor az utolsó ismert
-  érték látszik `(standby)` jelöléssel.
-- Ha az NVMe sem `hwmon`, sem `nvme-cli` segítségével nem olvasható, az adott
-  NVMe `n/a`, a lábjegyzet jelzi, a többi diszk változatlanul frissül.
-- Hotplug: az udisks eseményeire, valamint az NVMe- és `hwmon` eszközök
-  periodikus újrafelderítésekor a lista újraépül.
-- Alapértelmezett színküszöbök (`DEFAULT_THRESHOLDS` a `domain.js`-ben):
-  HDD 45/50 °C, SATA SSD 55/65 °C, NVMe 60/70 °C.
+The default system-temperature alert is 44 °C. Its physical meaning depends
+on the motherboard, so adjust it for the machine or set it to 0 to disable the
+alert.
 
-## Fejlesztés
+## Runtime behavior
 
-Az `extension.js` a GNOME Shell-, D-Bus- és widget-életciklust kezeli. A
-megjelenítéstől független döntési logika a `domain.js`, a hardverfelderítés
-segédfüggvényei pedig a `hardware.js` modulban vannak.
+- Every detected disk is listed in the menu.
+- A refresh cycle never overlaps the previous cycle.
+- UDisks, NVMe, and `hwmon` devices are rediscovered periodically.
+- UDisks hotplug events trigger an immediate disk-list rebuild.
+- Standby ATA disks retain their last known value and are marked as standby.
+- An unreadable disk is shown as `n/a` instead of being silently hidden.
+- NVMe read failures do not prevent ATA disks from updating.
+- Alerts turn the icon red and add a warning row to the menu.
 
-A regressziós ellenőrzések a bővítmény gyökeréből futtathatók:
+## Development
+
+`extension.js` owns the GNOME Shell, D-Bus, settings, and widget lifecycle.
+`domain.js` contains display-independent temperature logic, `hardware.js`
+contains portable hardware discovery, and `i18n.js` loads extension-local
+translation catalogs without changing GNOME Shell's process-wide locale.
+
+Run all regression, translation, syntax, and schema checks with:
 
 ```bash
 make test
 ```
 
-A telepíthető, minden szükséges modult, ikont és a lefordított sémát tartalmazó
-csomag elkészítése:
+Build an installable extension bundle containing the modules, icon,
+translations, and compiled schema with:
 
 ```bash
 make pack

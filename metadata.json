@@ -1,5 +1,6 @@
 {
-  "description": "HDD, SATA SSD és NVMe hőmérsékletek a felső panelen",
+  "description": "HDD, SATA SSD and NVMe temperatures in the top panel",
+  "gettext-domain": "disk-temperatures",
   "name": "Disk Temperatures",
   "settings-schema": "org.gnome.shell.extensions.disk-temps",
   "shell-version": [
@@ -7,5 +8,5 @@
   ],
   "url": "https://github.com/benetamas/disk-temps",
   "uuid": "disk-temps@lycantrop.hu",
-  "version": 3
+  "version": 4
 }

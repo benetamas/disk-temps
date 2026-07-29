@@ -4,6 +4,9 @@
 # Packaged GNOME Shell extensions
 /*.shell-extension.zip
 
+# Compiled translations
+/locale/
+
 # Local agent metadata
 /.agents/
 /.codex/

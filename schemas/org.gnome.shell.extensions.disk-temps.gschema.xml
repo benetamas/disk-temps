@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<schemalist>
+<schemalist gettext-domain="disk-temperatures">
   <enum id="org.gnome.shell.extensions.disk-temps.panel-position">
     <value nick="left" value="0"/>
     <value nick="center" value="1"/>
@@ -16,161 +16,173 @@
     <value nick="temperature" value="1"/>
   </enum>
 
+  <enum id="org.gnome.shell.extensions.disk-temps.language">
+    <value nick="en" value="0"/>
+    <value nick="de" value="1"/>
+    <value nick="hu" value="2"/>
+  </enum>
+
   <schema id="org.gnome.shell.extensions.disk-temps"
           path="/org/gnome/shell/extensions/disk-temps/">
 
+    <key name="language" enum="org.gnome.shell.extensions.disk-temps.language">
+      <default>'en'</default>
+      <summary>Language</summary>
+      <description>Language used by this extension. Changes apply immediately.</description>
+    </key>
+
     <key name="panel-position" enum="org.gnome.shell.extensions.disk-temps.panel-position">
       <default>'left'</default>
-      <summary>Panel oldal</summary>
-      <description>Melyik panel-boxba kerüljön az indikátor: left, center vagy right.</description>
+      <summary>Panel position</summary>
+      <description>The section of the GNOME panel where the indicator is placed.</description>
     </key>
 
     <key name="panel-index" type="i">
       <default>-1</default>
       <range min="-1" max="20"/>
-      <summary>Pozíció a boxon belül</summary>
-      <description>Sorrend a választott panel-boxban. -1 = a box végére.</description>
+      <summary>Position in section</summary>
+      <description>−1 places it at the end. In the left section, 0 is the first position after Activities.</description>
     </key>
 
     <key name="panel-mode" enum="org.gnome.shell.extensions.disk-temps.panel-mode">
       <default>'all'</default>
-      <summary>Panel tartalom</summary>
-      <description>all = minden diszk hőfoka a panelen, hottest = csak a legmelegebb.</description>
+      <summary>Panel content</summary>
+      <description>The drop-down menu always shows every detected disk.</description>
     </key>
 
     <key name="show-dev-label" type="b">
       <default>true</default>
-      <summary>Dev címke a panelen</summary>
-      <description>Hőfok elé kiírja az eszköznevet (sda, nvme0).</description>
+      <summary>Device label in panel</summary>
+      <description>Show the device name before its temperature: “sdb 54°” instead of just “54°”.</description>
     </key>
 
     <key name="show-icon" type="b">
       <default>true</default>
-      <summary>Hőmérő ikon</summary>
-      <description>Hőmérő ikon a panelen a hőfokok előtt. Színe a legmelegebb diszket követi.</description>
+      <summary>Thermometer icon</summary>
+      <description>Show an icon before the temperatures. Its color follows the most severe disk state.</description>
     </key>
 
     <key name="show-type" type="b">
       <default>true</default>
-      <summary>Diszktípus kiírása</summary>
-      <description>HDD / SSD / NVMe címke a hőfok mellett.</description>
+      <summary>Show disk type</summary>
+      <description>Show an HDD, SSD, or NVMe label next to the temperature: “sdb HDD 54°”.</description>
     </key>
 
     <key name="panel-only-warm" type="b">
       <default>true</default>
-      <summary>Csak a sárga vagy melegebb diszkek</summary>
-      <description>A panelen csak azok a diszkek látszanak, amelyek elérték a saját sárga küszöbüket (HDD 45 °C, SATA SSD 55 °C, NVMe 60 °C), plusz amelyeknél az olvasás hibázott. A menüben mindig mind látszik.</description>
+      <summary>Only warm or hotter disks</summary>
+      <description>Show only disks at or above their warm threshold and disks with read errors. When all disks are cool, show “OK 32°”. The menu still shows every disk.</description>
     </key>
 
     <key name="panel-order" enum="org.gnome.shell.extensions.disk-temps.panel-order">
       <default>'device'</default>
-      <summary>Panel sorrend</summary>
-      <description>device = fix eszköznév sorrend (nem ugrálnak az értékek), temperature = legmelegebb elöl.</description>
+      <summary>Panel order</summary>
+      <description>A fixed order prevents values from changing places.</description>
     </key>
 
     <key name="threshold-hdd-warm" type="i">
       <default>45</default>
       <range min="0" max="100"/>
-      <summary>HDD sárga küszöb (°C)</summary>
-      <description>Merevlemez ettől számít melegnek. Korai figyelmeztetés az 50 °C-os normál tartományhatár előtt.</description>
+      <summary>HDD warm (°C)</summary>
+      <description>Default: 45. Provides an early warning before the 50 °C normal-range boundary.</description>
     </key>
 
     <key name="threshold-hdd-hot" type="i">
       <default>50</default>
       <range min="0" max="100"/>
-      <summary>HDD piros küszöb (°C)</summary>
-      <description>Merevlemez ettől számít forrónak. A WD spec max 60 °C.</description>
+      <summary>HDD hot (°C)</summary>
+      <description>A hard disk is hot from this temperature. Default: 50; many drives specify 60 °C as their maximum.</description>
     </key>
 
     <key name="threshold-ssd-warm" type="i">
       <default>55</default>
       <range min="0" max="100"/>
-      <summary>SATA SSD sárga küszöb (°C)</summary>
-      <description>SATA SSD ettől számít melegnek. Korai figyelmeztetés a 65 °C-os beavatkozási pont előtt.</description>
+      <summary>SATA SSD warm (°C)</summary>
+      <description>Default: 55. SATA SSDs commonly specify 70 °C as their upper operating temperature.</description>
     </key>
 
     <key name="threshold-ssd-hot" type="i">
       <default>65</default>
       <range min="0" max="100"/>
-      <summary>SATA SSD piros küszöb (°C)</summary>
-      <description>SATA SSD ettől számít forrónak. Rendszeres 65 °C feletti működésnél javítani kell a hűtést.</description>
+      <summary>SATA SSD hot (°C)</summary>
+      <description>Default: 65. Sustained operation above this point calls for better cooling.</description>
     </key>
 
     <key name="threshold-nvme-warm" type="i">
       <default>60</default>
       <range min="0" max="100"/>
-      <summary>NVMe sárga küszöb (°C)</summary>
-      <description>NVMe ettől számít melegnek. Korai figyelmeztetés a 70 °C-os gyártói üzemi határ előtt.</description>
+      <summary>NVMe warm (°C)</summary>
+      <description>Default: 60. Provides an early warning before the 70 °C operating limit.</description>
     </key>
 
     <key name="threshold-nvme-hot" type="i">
       <default>70</default>
       <range min="0" max="100"/>
-      <summary>NVMe piros küszöb (°C)</summary>
-      <description>NVMe ettől számít forrónak. A vizsgált meghajtók gyártói üzemi felső határa és az NVMe ajánlott figyelmeztetési pontja 70 °C.</description>
+      <summary>NVMe hot (°C)</summary>
+      <description>Default: 70. This is a common upper operating limit and NVMe warning point.</description>
     </key>
 
     <key name="color-cool" type="s">
       <default>'#8ff0a4'</default>
-      <summary>Hideg szín</summary>
-      <description>#rrggbb vagy #rrggbbaa. Érvénytelen érték esetén a default érvényesül.</description>
+      <summary>Cool</summary>
+      <description>Color used below the warm threshold.</description>
     </key>
 
     <key name="color-warm" type="s">
       <default>'#f8e45c'</default>
-      <summary>Meleg (sárga) szín</summary>
-      <description>#rrggbb vagy #rrggbbaa. Érvénytelen érték esetén a default érvényesül.</description>
+      <summary>Warm</summary>
+      <description>Color used between the warm and hot thresholds.</description>
     </key>
 
     <key name="color-hot" type="s">
       <default>'#ff7b63'</default>
-      <summary>Forró (piros) szín</summary>
-      <description>#rrggbb vagy #rrggbbaa. Érvénytelen érték esetén a default érvényesül.</description>
+      <summary>Hot</summary>
+      <description>Color used above the hot threshold. Alerts and the alert icon use it too.</description>
     </key>
 
     <key name="color-na" type="s">
       <default>'#8c8c94'</default>
-      <summary>Ismeretlen / hibás olvasás színe</summary>
-      <description>#rrggbb vagy #rrggbbaa. Érvénytelen érték esetén a default érvényesül.</description>
+      <summary>Unknown / read error</summary>
+      <description>Color used when a reading failed (n/a) or no data is available yet.</description>
     </key>
 
     <key name="dark-menu" type="b">
       <default>true</default>
-      <summary>Sötét lenyíló menü</summary>
-      <description>Saját sötét hátteret ad a menünek, a shell témától függetlenül. Világos témán (pl. Lavanda: fehér menüháttér) enélkül olvashatatlan a szöveg.</description>
+      <summary>Dark drop-down menu</summary>
+      <description>Use a dark menu background independently of the shell theme. Secondary text can be difficult to read with this disabled on light themes.</description>
     </key>
 
     <key name="show-systin" type="b">
       <default>true</default>
-      <summary>Rendszerhőfok a panelen</summary>
-      <description>A felismert SYSTIN, System, Motherboard, Chassis vagy Ambient hwmon szenzor hőfoka a panelen. A panel-only-warm szűrés nem érinti.</description>
+      <summary>System temperature in panel</summary>
+      <description>Show the detected SYSTIN, System, Motherboard, or Ambient hwmon sensor after the icon, using its own name. Disk filtering does not hide it.</description>
     </key>
 
     <key name="show-sensors" type="b">
       <default>true</default>
-      <summary>Rendszerszenzorok a menüben</summary>
-      <description>A felismert rendszerhőfok és az ugyanazon alaplapi hwmon eszköz mérhető ventilátorainak RPM-je a menü alján.</description>
+      <summary>System sensors in menu</summary>
+      <description>Show the detected system temperature and measurable fans from the same motherboard hwmon device. A fan is monitored after it has reported a positive speed.</description>
     </key>
 
     <key name="alert-systin" type="i">
       <default>44</default>
       <range min="0" max="90"/>
-      <summary>Rendszerhőfok riasztási küszöb (°C)</summary>
-      <description>Ennyi fölött riaszt az ikon; 3 °C-kal alatta sárga. A hwmon szenzor fizikai helye alaplapfüggő, ezért a küszöb a géphez igazítható. 0 = kikapcsolva.</description>
+      <summary>Alert: system temperature (°C)</summary>
+      <description>Default: 44. The indicator turns warm 3 °C earlier. Sensor placement depends on the motherboard, so adjust this value for the machine if necessary. 0 disables the alert.</description>
     </key>
 
     <key name="alert-hdd" type="i">
       <default>50</default>
       <range min="0" max="90"/>
-      <summary>HDD riasztási küszöb (°C)</summary>
-      <description>Bármely merevlemez ennyi fölött riaszt. 0 = kikapcsolva.</description>
+      <summary>Alert: HDD (°C)</summary>
+      <description>Alert threshold for any hard disk. Default: 50. 0 disables the alert.</description>
     </key>
 
     <key name="refresh-seconds" type="i">
       <default>5</default>
       <range min="1" max="300"/>
-      <summary>Frissítési időköz (s)</summary>
-      <description>Ennyi másodpercenként olvas SMART hőfokot.</description>
+      <summary>Refresh interval (seconds)</summary>
+      <description>SMART reading interval. Default: 5.</description>
     </key>
   </schema>
 </schemalist>
